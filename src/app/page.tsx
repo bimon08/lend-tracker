@@ -33,19 +33,25 @@ export default function DashboardPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [defaultType, setDefaultType] = useState<'lend' | 'borrow'>('lend');
   const [personNames, setPersonNames] = useState<Map<string, string>>(new Map());
+  const [txnOutstanding, setTxnOutstanding] = useState<Map<string, number>>(new Map());
   const { showToast, ToastElement } = useToast();
 
-  // Load person names for recent transactions
+  // Load person names + outstanding amounts for recent transactions
   const loadPersonNames = useCallback(async () => {
     if (!recentTxns || recentTxns.length === 0) return;
     const names = new Map<string, string>();
+    const outstanding = new Map<string, number>();
     for (const txn of recentTxns) {
       if (!names.has(txn.personId)) {
         const person = await dataLayer.getPerson(txn.personId);
         if (person) names.set(person.id, person.name);
       }
+      const payments = await dataLayer.getPayments(txn.id);
+      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      outstanding.set(txn.id, Math.max(0, txn.amount - totalPaid));
     }
     setPersonNames(names);
+    setTxnOutstanding(outstanding);
   }, [recentTxns]);
 
   // Load names when recent transactions change
@@ -185,6 +191,7 @@ export default function DashboardPage() {
         <div className="transaction-list">
           {recentTxns.map((txn) => {
             const name = personNames.get(txn.personId) || '...';
+            const outstanding = txnOutstanding.get(txn.id) ?? txn.amount;
             return (
               <div
                 key={txn.id}
@@ -217,8 +224,13 @@ export default function DashboardPage() {
                 </div>
                 <div className="transaction-amounts">
                   <div className={`transaction-amount ${txn.type}`}>
-                    {formatCurrency(txn.amount)}
+                    {formatCurrency(outstanding)}
                   </div>
+                  {outstanding < txn.amount && (
+                    <div className="transaction-outstanding">
+                      of {formatCurrency(txn.amount)}
+                    </div>
+                  )}
                   <div className={`status-badge ${txn.status}`}>
                     {getStatusLabel(txn.status)}
                   </div>

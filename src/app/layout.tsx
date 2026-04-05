@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
+import RegisterSW from '@/components/RegisterSW';
 
 export const metadata: Metadata = {
   title: 'LendTracker — Track Money Lent & Borrowed',
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body>
         <main>{children}</main>
         <BottomNav />
+        <RegisterSW />
       </body>
     </html>
   );
