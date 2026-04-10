@@ -556,6 +556,21 @@ export const dataLayer = {
     const supabase = createClient();
     const userId = await getUserId();
 
+    // Admin is always permanently pro
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email && ADMIN_EMAILS.includes(user.email)) {
+      return {
+        id: 'admin',
+        plan: 'pro',
+        status: 'active',
+        trialStart: null,
+        trialEnd: null,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        createdAt: new Date(),
+      };
+    }
+
     // Try to get existing subscription
     const { data, error } = await supabase
       .from('user_subscriptions')
@@ -926,7 +941,7 @@ export function isTrialExpired(sub: Subscription | null): boolean {
 // ─── Free Tier Limits ─────────────────────────────────────────────────────────
 
 export const FREE_LIMITS = {
-  maxPeople: 3,
+  maxPeople: 5,
   maxTransactions: 10,
   canExport: false,
   canImport: false,

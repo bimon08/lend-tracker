@@ -9,13 +9,14 @@ import {
   Clock,
   ArrowLeft,
   MessageCircle,
+  Phone,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSubscription } from '@/lib/hooks';
 import { isProUser, getTrialDaysLeft, isTrialExpired } from '@/lib/db';
 
 const FREE_FEATURES = [
-  { text: 'Up to 3 people', included: true },
+  { text: 'Up to 5 people', included: true },
   { text: 'Up to 10 transactions', included: true },
   { text: 'Record payments', included: true },
   { text: 'Cloud sync', included: true },
@@ -46,11 +47,15 @@ export default function PricingPage() {
   const daysLeft = getTrialDaysLeft(subscription);
   const trialExpired = isTrialExpired(subscription);
 
-  const handleContactUs = () => {
+  const handleWhatsApp = () => {
     window.open(
-      'mailto:pixelthread.dev@gmail.com?subject=LendTracker%20Pro%20Upgrade&body=Hi%2C%20I%20would%20like%20to%20upgrade%20to%20LendTracker%20Pro.',
+      'https://wa.me/918837011018?text=Hi%2C%20I%20would%20like%20to%20upgrade%20to%20LendTracker%20Pro%20%28%E2%82%B920%2Fmonth%29.',
       '_blank'
     );
+  };
+
+  const handleCall = () => {
+    window.open('tel:+918837011018');
   };
 
   return (
@@ -188,13 +193,27 @@ export default function PricingPage() {
               {subscription?.status === 'trialing' ? `Trial Active — ${daysLeft} days left` : 'Current Plan'}
             </div>
           ) : (
-            <Button
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 py-3 font-semibold text-white shadow-lg shadow-violet-500/25 transition-transform active:scale-[0.98]"
-              onPress={handleContactUs}
-              id="upgrade-btn"
-            >
-              <MessageCircle size={16} /> Contact Us to Upgrade
-            </Button>
+            <div className="flex gap-2">
+              <button
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition-transform active:scale-[0.97]"
+                onClick={handleWhatsApp}
+                id="whatsapp-btn"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48">
+                  <path fill="#fff" d="M4.9,43.3l2.7-9.8C5.9,30.6,5,27.3,5,24C5,13.5,13.5,5,24,5c5.1,0,9.8,2,13.4,5.6C41,14.2,43,18.9,43,24c0,10.5-8.5,19-19,19c0,0,0,0,0,0h0c-3.2,0-6.3-0.8-9.1-2.3L4.9,43.3z"/>
+                  <path fill="#40c351" d="M35.2,12.8c-3-3-6.9-4.6-11.2-4.6C15.3,8.2,8.2,15.3,8.2,24c0,3,0.8,5.9,2.4,8.4L11,33l-1.6,5.8l6-1.6l0.6,0.3c2.4,1.4,5.2,2.2,8,2.2h0c8.7,0,15.8-7.1,15.8-15.8C39.8,19.8,38.2,15.8,35.2,12.8z"/>
+                  <path fill="#fff" fillRule="evenodd" d="M19.3,16c-0.4-0.8-0.7-0.8-1.1-0.8c-0.3,0-0.6,0-0.9,0s-0.8,0.1-1.3,0.6c-0.4,0.5-1.7,1.6-1.7,4s1.7,4.6,1.9,4.9s3.3,5.3,8.1,7.2c4,1.6,4.8,1.3,5.7,1.2c0.9-0.1,2.8-1.1,3.2-2.3c0.4-1.1,0.4-2.1,0.3-2.3c-0.1-0.2-0.4-0.3-0.9-0.6s-2.8-1.4-3.2-1.5c-0.4-0.2-0.8-0.2-1.1,0.2c-0.3,0.5-1.2,1.5-1.5,1.9c-0.3,0.3-0.6,0.4-1,0.1c-0.5-0.2-2-0.7-3.8-2.4c-1.4-1.3-2.4-2.8-2.6-3.3c-0.3-0.5,0-0.7,0.2-1c0.2-0.2,0.5-0.6,0.7-0.8c0.2-0.3,0.3-0.5,0.5-0.8c0.2-0.3,0.1-0.6,0-0.8C20.6,19.3,19.7,17,19.3,16z" clipRule="evenodd"/>
+                </svg>
+                WhatsApp
+              </button>
+              <button
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 py-3 text-sm font-semibold text-violet-300 transition-transform active:scale-[0.97]"
+                onClick={handleCall}
+                id="call-btn"
+              >
+                <Phone size={16} /> Call Us
+              </button>
+            </div>
           )}
         </Card>
       </div>
@@ -219,7 +238,7 @@ export default function PricingPage() {
       </div>
 
       <p className="mt-6 text-center text-[0.7rem] text-slate-600">
-        Questions? Email us at pixelthread.dev@gmail.com
+        Questions? WhatsApp or call +91 88370 11018
       </p>
     </div>
   );
