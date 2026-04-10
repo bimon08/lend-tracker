@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { PostHogProvider, PostHogPageview } from '@/lib/posthog';
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default function RootLayout({
           </Suspense>
           <main>{children}</main>
           <BottomNav />
+          <PWAInstallPrompt />
         </PostHogProvider>
       </body>
     </html>
