@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import OfflineSyncBanner from '@/components/OfflineSyncBanner';
 import { PostHogProvider, PostHogPageview } from '@/lib/posthog';
 
 export const metadata: Metadata = {
@@ -40,6 +41,7 @@ export default function RootLayout({
           <main>{children}</main>
           <BottomNav />
           <PWAInstallPrompt />
+          <OfflineSyncBanner />
         </PostHogProvider>
       </body>
     </html>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { dataLayer, type Person, type Transaction, type Payment, type Subscription } from './db';
+import { setCache, getCache } from './offline-cache';
 
-// ─── Generic async data hook ─────────────────────────────────────────────────
+// ─── Generic async data hook with offline cache ──────────────────────────────
 
-function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
+function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = [], cacheKey?: string) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +17,18 @@ function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
     try {
       const result = await fetcher();
       setData(result);
+      // Cache for offline use
+      if (cacheKey) setCache(cacheKey, result);
     } catch (e) {
+      // If offline, try to load from cache
+      if (cacheKey) {
+        const cached = getCache<T>(cacheKey);
+        if (cached) {
+          setData(cached);
+          setLoading(false);
+          return;
+        }
+      }
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -34,21 +46,21 @@ function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
 // ─── Dashboard Summary ──────────────────────────────────────────────────────
 
 export function useSummary() {
-  return useAsyncData(() => dataLayer.getSummary(), []);
+  return useAsyncData(() => dataLayer.getSummary(), [], 'summary');
 }
 
 // ─── Persons ─────────────────────────────────────────────────────────────────
 
 export function usePersons() {
-  return useAsyncData(() => dataLayer.getPersons(), []);
+  return useAsyncData(() => dataLayer.getPersons(), [], 'persons');
 }
 
 export function usePerson(id: string) {
-  return useAsyncData(() => dataLayer.getPerson(id), [id]);
+  return useAsyncData(() => dataLayer.getPerson(id), [id], `person_${id}`);
 }
 
 export function usePersonSummary(personId: string) {
-  return useAsyncData(() => dataLayer.getPersonSummary(personId), [personId]);
+  return useAsyncData(() => dataLayer.getPersonSummary(personId), [personId], `person_summary_${personId}`);
 }
 
 // ─── Transactions ────────────────────────────────────────────────────────────
@@ -60,12 +72,13 @@ export function useTransactions(filters?: {
 }) {
   return useAsyncData(
     () => dataLayer.getTransactions(filters),
-    [filters?.type, filters?.personId, filters?.status]
+    [filters?.type, filters?.personId, filters?.status],
+    `txns_${filters?.type || 'all'}_${filters?.personId || 'all'}`
   );
 }
 
 export function useRecentTransactions(limit: number = 10) {
-  return useAsyncData(() => dataLayer.getRecentTransactions(limit), [limit]);
+  return useAsyncData(() => dataLayer.getRecentTransactions(limit), [limit], `recent_txns_${limit}`);
 }
 
 // ─── Payments ────────────────────────────────────────────────────────────────
@@ -73,7 +86,8 @@ export function useRecentTransactions(limit: number = 10) {
 export function usePayments(transactionId: string) {
   return useAsyncData(
     () => dataLayer.getPayments(transactionId),
-    [transactionId]
+    [transactionId],
+    `payments_${transactionId}`
   );
 }
 
