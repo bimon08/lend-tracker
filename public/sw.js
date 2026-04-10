@@ -1,4 +1,4 @@
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const CACHE_NAME = `lendtracker-v${CACHE_VERSION}`;
 
 // Pre-cache app shell for offline access
@@ -9,6 +9,7 @@ const APP_SHELL = [
   '/people',
   '/settings',
   '/login',
+  '/pricing',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -23,7 +24,6 @@ self.addEventListener('install', (event) => {
       });
     })
   );
-  // Skip waiting — take over immediately
   self.skipWaiting();
 });
 
@@ -54,25 +54,8 @@ self.addEventListener('fetch', (event) => {
   // API calls — always network, never cache
   if (url.pathname.startsWith('/api/')) return;
 
-  // Navigation (HTML pages) — network first, cache fallback for offline
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Update cache with fresh version
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => {
-          // Offline — serve from cache
-          return caches.match(request).then((cached) => {
-            return cached || caches.match('/');
-          });
-        })
-    );
-    return;
-  }
+  // Supabase calls — never cache
+  if (url.hostname.includes('supabase')) return;
 
   // Static assets with hashes (_next/static) — cache first (immutable)
   if (url.pathname.startsWith('/_next/static')) {
@@ -89,12 +72,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else — network first, cache fallback
+  // Everything else (pages, RSC payloads, assets) — network first, cache fallback
   event.respondWith(
     fetch(request)
       .then((response) => {
+        // Cache the fresh response for offline fallback
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() => {
+        return caches.match(request).then((cached) => {
+          if (cached) return cached;
+          // For navigation, fall back to cached home page
+          if (request.mode === 'navigate') {
+            return caches.match('/');
+          }
+          return new Response('Offline', { status: 503 });
+        });
+      })
   );
 });

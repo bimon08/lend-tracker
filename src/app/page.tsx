@@ -44,12 +44,26 @@ export default function DashboardPage() {
     const outstanding = new Map<string, number>();
     for (const txn of recentTxns) {
       if (!names.has(txn.personId)) {
-        const person = await dataLayer.getPerson(txn.personId);
-        if (person) names.set(person.id, person.name);
+        try {
+          const person = await dataLayer.getPerson(txn.personId);
+          if (person) names.set(person.id, person.name);
+        } catch {
+          // Offline — try to get from cached persons list
+          const { getCache } = await import('@/lib/offline-cache');
+          const cached = getCache<{ id: string; name: string }[]>('persons');
+          if (cached) {
+            const p = cached.find((c) => c.id === txn.personId);
+            if (p) names.set(p.id, p.name);
+          }
+        }
       }
-      const payments = await dataLayer.getPayments(txn.id);
-      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-      outstanding.set(txn.id, Math.max(0, txn.amount - totalPaid));
+      try {
+        const payments = await dataLayer.getPayments(txn.id);
+        const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+        outstanding.set(txn.id, Math.max(0, txn.amount - totalPaid));
+      } catch {
+        outstanding.set(txn.id, txn.amount); // Assume unresolved if offline
+      }
     }
     setPersonNames(names);
     setTxnOutstanding(outstanding);
