@@ -27,18 +27,18 @@ export default function BottomNav() {
   const [loadingHref, setLoadingHref] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // Hide bottom nav on login page
-  if (pathname === '/login' || pathname === '/employee-login') return null;
-
   // Fetch pending change count for badge
   useEffect(() => {
+    if (pathname === '/login' || pathname === '/employee-login') return;
     dataLayer.getPendingChangeCount().then(setPendingCount).catch(() => {});
-    // Re-check every 30 seconds
     const interval = setInterval(() => {
       dataLayer.getPendingChangeCount().then(setPendingCount).catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
   }, [pathname]);
+
+  // Hide bottom nav on login page
+  if (pathname === '/login' || pathname === '/employee-login') return null;
 
   const handleNav = (href: string) => {
     if (href === pathname) return;

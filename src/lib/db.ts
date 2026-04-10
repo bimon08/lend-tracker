@@ -732,15 +732,19 @@ export const dataLayer = {
   },
 
   async getPendingChangeCount(): Promise<number> {
-    const supabase = createClient();
-    const userId = await getUserId();
-    const { count, error } = await supabase
-      .from('pending_changes')
-      .select('*', { count: 'exact', head: true })
-      .eq('owner_id', userId)
-      .eq('status', 'pending');
-    if (error) throw error;
-    return count || 0;
+    try {
+      const supabase = createClient();
+      const userId = await getUserId();
+      const { count, error } = await supabase
+        .from('pending_changes')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', userId)
+        .eq('status', 'pending');
+      if (error) return 0;
+      return count || 0;
+    } catch {
+      return 0;
+    }
   },
 
   async reviewPendingChange(changeId: string, approved: boolean): Promise<void> {
