@@ -1,12 +1,14 @@
-const CACHE_NAME = 'lendtracker-v1';
+const CACHE_VERSION = 3;
+const CACHE_NAME = `lendtracker-v${CACHE_VERSION}`;
 
-// App shell files to cache on install
+// Pre-cache app shell for offline access
 const APP_SHELL = [
   '/',
   '/lend',
   '/borrow',
   '/people',
   '/settings',
+  '/login',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -16,13 +18,16 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL);
+      return cache.addAll(APP_SHELL).catch((err) => {
+        console.warn('SW: Failed to cache some shell assets:', err);
+      });
     })
   );
+  // Skip waiting — take over immediately
   self.skipWaiting();
 });
 
-// Activate — clean up old caches
+// Activate — delete ALL old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -36,30 +41,31 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch — network first for pages, cache first for assets
+// Fetch strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
+  // Skip non-GET, cross-origin, dev requests
   if (request.method !== 'GET') return;
-
-  // Skip cross-origin requests
   if (url.origin !== self.location.origin) return;
-
-  // Skip Next.js HMR/dev requests
   if (url.pathname.startsWith('/_next/webpack-hmr')) return;
 
-  // For navigation requests (HTML pages) — network first, fall back to cache
+  // API calls — always network, never cache
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Navigation (HTML pages) — network first, cache fallback for offline
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          // Update cache with fresh version
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
         .catch(() => {
+          // Offline — serve from cache
           return caches.match(request).then((cached) => {
             return cached || caches.match('/');
           });
@@ -68,16 +74,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets (_next/static, icons, etc.) — cache first
-  if (
-    url.pathname.startsWith('/_next/static') ||
-    url.pathname.startsWith('/icons') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.ico') ||
-    url.pathname.endsWith('.woff2')
-  ) {
+  // Static assets with hashes (_next/static) — cache first (immutable)
+  if (url.pathname.startsWith('/_next/static')) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
@@ -91,12 +89,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For everything else — network first, cache fallback
+  // Everything else — network first, cache fallback
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;
       })
       .catch(() => caches.match(request))

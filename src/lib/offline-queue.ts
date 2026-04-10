@@ -41,12 +41,19 @@ export function addToQueue(action: string, args: unknown[]) {
     retries: 0,
   });
   saveQueue(queue);
-  // Dispatch event so UI can react
   window.dispatchEvent(new CustomEvent('offline-queue-update', { detail: { count: queue.length } }));
 }
 
 export function getQueueCount(): number {
   return getQueue().length;
+}
+
+export function removeFromQueue(id: string) {
+  const queue = getQueue().filter(item => item.id !== id);
+  saveQueue(queue);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('offline-queue-update', { detail: { count: queue.length } }));
+  }
 }
 
 export function clearQueue() {
@@ -56,38 +63,53 @@ export function clearQueue() {
   }
 }
 
-// ─── Sync ────────────────────────────────────────────────────────────────────
+// ─── Sync with Conflict Checking ─────────────────────────────────────────────
 
-export async function syncQueue(
-  executor: (action: string, args: unknown[]) => Promise<void>
-): Promise<{ synced: number; failed: number }> {
+export async function syncQueueWithConflictCheck(
+  executor: (action: string, args: unknown[]) => Promise<void>,
+  conflictChecker: (item: QueuedAction) => Promise<'ok' | 'conflict'>
+): Promise<{ synced: number; failed: number; conflicted: number }> {
   const queue = getQueue();
-  if (queue.length === 0) return { synced: 0, failed: 0 };
+  if (queue.length === 0) return { synced: 0, failed: 0, conflicted: 0 };
 
   let synced = 0;
   let failed = 0;
-  const remaining: QueuedAction[] = [];
+  let conflicted = 0;
 
   for (const item of queue) {
+    // Check for conflicts on update operations
+    const status = await conflictChecker(item);
+    if (status === 'conflict') {
+      // Remove from queue — the conflict modal will handle resolution
+      removeFromQueue(item.id);
+      conflicted++;
+      return { synced, failed, conflicted }; // Pause sync for user input
+    }
+
     try {
       await executor(item.action, item.args);
+      removeFromQueue(item.id);
       synced++;
     } catch (e) {
       console.error('Sync failed for', item.action, e);
       item.retries++;
-      if (item.retries < 5) {
-        remaining.push(item);
+      if (item.retries >= 5) {
+        removeFromQueue(item.id); // Give up after 5 retries
       }
       failed++;
     }
   }
 
-  saveQueue(remaining);
-  window.dispatchEvent(
-    new CustomEvent('offline-queue-update', { detail: { count: remaining.length } })
-  );
+  return { synced, failed, conflicted };
+}
 
-  return { synced, failed };
+// ─── Simple Sync (no conflict checking) ──────────────────────────────────────
+
+export async function syncQueue(
+  executor: (action: string, args: unknown[]) => Promise<void>
+): Promise<{ synced: number; failed: number }> {
+  const result = await syncQueueWithConflictCheck(executor, async () => 'ok');
+  return { synced: result.synced, failed: result.failed };
 }
 
 // ─── Online Check ────────────────────────────────────────────────────────────
