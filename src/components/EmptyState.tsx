@@ -1,25 +1,21 @@
-'use client';
-
-import { Inbox } from 'lucide-react';
+import { ReactNode } from 'react';
 
 interface EmptyStateProps {
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   title: string;
-  description: string;
+  description?: string;
 }
 
-export default function EmptyState({
-  icon,
-  title,
-  description,
-}: EmptyStateProps) {
+export default function EmptyState({ icon, title, description }: EmptyStateProps) {
   return (
-    <div className="empty-state animate-in">
-      <div className="empty-state-icon">
-        {icon || <Inbox size={28} />}
-      </div>
-      <h3 className="empty-state-title">{title}</h3>
-      <p className="empty-state-text">{description}</p>
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-6 py-10 text-center">
+      {icon && (
+        <div className="mb-3 text-slate-500">{icon}</div>
+      )}
+      <h3 className="text-sm font-semibold text-slate-300">{title}</h3>
+      {description && (
+        <p className="mt-1 text-xs text-slate-500">{description}</p>
+      )}
     </div>
   );
 }

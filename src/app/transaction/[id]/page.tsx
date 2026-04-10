@@ -2,6 +2,7 @@
 
 import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { Card, Button } from '@heroui/react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -53,22 +54,19 @@ export default function TransactionDetailPage({
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="skeleton skeleton-card" style={{ height: 200 }} />
+      <div className="mx-auto max-w-lg px-4 pt-2">
+        <div className="skeleton" style={{ height: 200 }} />
       </div>
     );
   }
 
   if (!txn) {
     return (
-      <div className="page-container">
-        <button className="back-btn" onClick={() => router.back()}>
-          <ArrowLeft size={18} />
-          Back
+      <div className="mx-auto max-w-lg px-4 pt-2">
+        <button className="mb-4 flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200" onClick={() => router.back()}>
+          <ArrowLeft size={18} /> Back
         </button>
-        <div className="empty-state">
-          <h3 className="empty-state-title">Transaction not found</h3>
-        </div>
+        <div className="py-10 text-center text-slate-500">Transaction not found</div>
       </div>
     );
   }
@@ -77,254 +75,145 @@ export default function TransactionDetailPage({
   const daysLeft = txn.dueDate ? getDaysUntilDue(txn.dueDate) : null;
 
   return (
-    <div className="page-container">
+    <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
       {ToastElement}
 
-      <button className="back-btn" onClick={() => router.back()} id="back-btn">
-        <ArrowLeft size={18} />
-        Back
+      <button className="mb-4 flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200" onClick={() => router.back()} id="back-btn">
+        <ArrowLeft size={18} /> Back
       </button>
 
       {/* Transaction Header */}
-      <div className="txn-detail-header animate-in">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className={`type-badge ${txn.type}`}>
-            {txn.type === 'lend' ? (
-              <ArrowUpRight size={12} />
-            ) : (
-              <ArrowDownLeft size={12} />
-            )}
+      <Card className="animate-in mb-4 border border-white/5 bg-slate-800/40 p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            txn.type === 'lend' ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500'
+          }`}>
+            {txn.type === 'lend' ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}
             {txn.type === 'lend' ? 'Lent' : 'Borrowed'}
           </span>
-          <span className={`status-badge ${txn.status}`}>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            txn.status === 'settled' ? 'bg-emerald-500/12 text-emerald-500'
+            : txn.status === 'partial' ? 'bg-amber-500/12 text-amber-500'
+            : 'bg-red-500/12 text-red-500'
+          }`}>
             {getStatusLabel(txn.status)}
           </span>
           {overdue && (
-            <span className="overdue-indicator">
-              <AlertCircle size={10} />
-              Overdue
+            <span className="flex items-center gap-1 rounded-full bg-red-500/12 px-2.5 py-1 text-xs font-semibold text-red-400">
+              <AlertCircle size={10} /> Overdue
             </span>
           )}
         </div>
 
-        <div className={`txn-detail-amount ${txn.type}`}>
+        <p className="text-3xl font-bold" style={{ color: txn.type === 'lend' ? '#34d399' : '#fbbf24' }}>
           {formatCurrency(txn.amount)}
-        </div>
+        </p>
 
-        <div
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--color-text-secondary)',
-            cursor: 'pointer',
-          }}
-          onClick={() => router.push(`/person/${txn.personId}`)}
-        >
+        <p className="mt-1 cursor-pointer text-sm text-slate-400" onClick={() => router.push(`/person/${txn.personId}`)}>
           {txn.type === 'lend' ? 'Lent to' : 'Borrowed from'}{' '}
-          <strong style={{ color: 'var(--color-text-primary)' }}>
-            {txn.personName}
-          </strong>
-        </div>
+          <strong className="text-slate-100">{txn.personName}</strong>
+        </p>
 
-        <div className="txn-detail-info">
-          <div className="txn-detail-row">
-            <span className="txn-detail-label">
-              <Calendar size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-              Date
-            </span>
-            <span className="txn-detail-value">{formatDate(txn.date)}</span>
+        <div className="mt-4 space-y-2.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1.5 text-slate-400"><Calendar size={12} /> Date</span>
+            <span className="text-slate-200">{formatDate(txn.date)}</span>
           </div>
           {txn.dueDate && (
-            <div className="txn-detail-row">
-              <span className="txn-detail-label">
-                <Calendar size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                Due Date
-              </span>
-              <span
-                className="txn-detail-value"
-                style={{
-                  color: overdue
-                    ? 'var(--color-danger)'
-                    : 'var(--color-text-primary)',
-                }}
-              >
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5 text-slate-400"><Calendar size={12} /> Due Date</span>
+              <span className={overdue ? 'text-red-400' : 'text-slate-200'}>
                 {formatDate(txn.dueDate)}
-                {daysLeft !== null && !overdue && daysLeft > 0 && (
-                  <span
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--color-text-tertiary)',
-                      marginLeft: '6px',
-                    }}
-                  >
-                    ({daysLeft}d left)
-                  </span>
-                )}
+                {daysLeft !== null && !overdue && daysLeft > 0 && <span className="ml-1.5 text-xs text-slate-500">({daysLeft}d left)</span>}
               </span>
             </div>
           )}
           {txn.note && (
-            <div className="txn-detail-row">
-              <span className="txn-detail-label">
-                <FileText size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                Note
-              </span>
-              <span className="txn-detail-value">{txn.note}</span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5 text-slate-400"><FileText size={12} /> Note</span>
+              <span className="text-slate-200">{txn.note}</span>
             </div>
           )}
-          <div className="txn-detail-row">
-            <span className="txn-detail-label">Paid</span>
-            <span className="txn-detail-value" style={{ color: 'var(--color-success)' }}>
-              {formatCurrency(txn.totalPaid)}
-            </span>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">Paid</span>
+            <span className="font-medium text-emerald-400">{formatCurrency(txn.totalPaid)}</span>
           </div>
-          <div className="txn-detail-row">
-            <span className="txn-detail-label">Outstanding</span>
-            <span
-              className="txn-detail-value"
-              style={{
-                color:
-                  txn.outstanding > 0
-                    ? txn.type === 'lend'
-                      ? 'var(--color-lend-light)'
-                      : 'var(--color-borrow-light)'
-                    : 'var(--color-text-tertiary)',
-                fontWeight: 700,
-              }}
-            >
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">Outstanding</span>
+            <span className="font-bold" style={{ color: txn.outstanding > 0 ? (txn.type === 'lend' ? '#34d399' : '#fbbf24') : '#64748b' }}>
               {formatCurrency(txn.outstanding)}
             </span>
           </div>
         </div>
 
-        {/* Progress */}
-        <div
-          style={{
-            marginTop: '12px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: '0.7rem',
-            color: 'var(--color-text-tertiary)',
-          }}
-        >
+        <div className="mt-3 flex justify-between text-[0.7rem] text-slate-500">
           <span>{Math.round(txn.progress)}% paid</span>
         </div>
-        <div className="progress-bar">
+        <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-700/50">
           <div
-            className={`progress-bar-fill ${txn.type}`}
+            className={`h-full rounded-full transition-all duration-500 ${txn.type === 'lend' ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gradient-to-r from-amber-600 to-amber-400'}`}
             style={{ width: `${txn.progress}%` }}
           />
         </div>
-      </div>
+      </Card>
 
-      {/* Record Payment */}
       {txn.status !== 'settled' && (
-        <button
-          className={`btn ${txn.type === 'lend' ? 'btn-lend' : 'btn-borrow'}`}
-          style={{ marginBottom: '20px' }}
-          onClick={() => setShowPaymentModal(true)}
+        <Button
+          className={`mb-5 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-semibold text-white ${
+            txn.type === 'lend' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' : 'bg-gradient-to-r from-amber-600 to-amber-500'
+          }`}
+          onPress={() => setShowPaymentModal(true)}
           id="record-payment-btn"
         >
-          <Plus size={18} />
-          Record Payment
-        </button>
+          <Plus size={18} /> Record Payment
+        </Button>
       )}
 
-      {/* Payment History */}
-      <div className="section-header">
-        <h2 className="section-title">Payment History</h2>
-      </div>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Payment History</h2>
 
       {txn.payments.length === 0 ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '24px',
-            color: 'var(--color-text-tertiary)',
-            fontSize: '0.85rem',
-          }}
-        >
-          No payments recorded yet
-        </div>
+        <p className="py-6 text-center text-sm text-slate-500">No payments recorded yet</p>
       ) : (
-        <div className="payment-timeline" style={{ marginBottom: '20px' }}>
+        <div className="relative mb-5 space-y-0 pl-6">
+          <div className="absolute bottom-1 left-2 top-1 w-0.5 rounded-full bg-white/5" />
           {txn.payments.map((payment) => (
-            <div key={payment.id} className="payment-item">
-              <div className="payment-item-header">
-                <span className="payment-item-amount">
-                  +{formatCurrency(payment.amount)}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="payment-item-date">
-                    {formatDate(payment.date)}
-                  </span>
+            <div key={payment.id} className="relative py-2.5">
+              <div className="absolute -left-[18px] top-4 h-2.5 w-2.5 rounded-full border-2 border-emerald-500 bg-slate-900" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-emerald-400">+{formatCurrency(payment.amount)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">{formatDate(payment.date)}</span>
                   <button
-                    className="btn-icon"
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      padding: 0,
-                      borderColor: 'transparent',
-                    }}
+                    className="rounded-md p-1 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
                     onClick={() => setShowDeletePayment(payment.id)}
                   >
                     <Trash2 size={12} />
                   </button>
                 </div>
               </div>
-              {payment.note && (
-                <div className="payment-item-note">{payment.note}</div>
-              )}
+              {payment.note && <p className="mt-0.5 text-xs text-slate-400">{payment.note}</p>}
             </div>
           ))}
         </div>
       )}
 
-      {/* Delete Transaction */}
-      <div className="delete-zone">
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{
-            color: 'var(--color-danger)',
-            borderColor: 'rgba(239, 68, 68, 0.2)',
-          }}
-          onClick={() => setShowDeleteTxn(true)}
-          id="delete-txn-btn"
-        >
-          <Trash2 size={14} />
-          Delete Transaction
-        </button>
+      <div className="flex justify-center pb-6">
+        <Button variant="ghost" className="text-red-400" onPress={() => setShowDeleteTxn(true)} id="delete-txn-btn">
+          <Trash2 size={14} className="mr-1.5" /> Delete Transaction
+        </Button>
       </div>
 
-      {/* Modals */}
       <AddPaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        onSuccess={async () => {
-          await refetch();
-          showToast('Payment recorded!');
-        }}
+        onSuccess={async () => { await refetch(); showToast('Payment recorded!'); }}
         transactionId={id}
         transactionType={txn.type}
         outstanding={txn.outstanding}
       />
 
-      <ConfirmDialog
-        isOpen={showDeleteTxn}
-        title="Delete Transaction"
-        message="This will permanently delete this transaction and all its payments. This cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={handleDeleteTransaction}
-        onCancel={() => setShowDeleteTxn(false)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!showDeletePayment}
-        title="Delete Payment"
-        message="This will remove this payment record and update the outstanding balance."
-        confirmLabel="Delete"
-        onConfirm={() => showDeletePayment && handleDeletePayment(showDeletePayment)}
-        onCancel={() => setShowDeletePayment(null)}
-      />
+      <ConfirmDialog isOpen={showDeleteTxn} title="Delete Transaction" message="This will permanently delete this transaction and all its payments. This cannot be undone." confirmLabel="Delete" onConfirm={handleDeleteTransaction} onCancel={() => setShowDeleteTxn(false)} />
+      <ConfirmDialog isOpen={!!showDeletePayment} title="Delete Payment" message="This will remove this payment record and update the outstanding balance." confirmLabel="Delete" onConfirm={() => showDeletePayment && handleDeletePayment(showDeletePayment)} onCancel={() => setShowDeletePayment(null)} />
     </div>
   );
 }

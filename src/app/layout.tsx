@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
-import RegisterSW from '@/components/RegisterSW';
+import { PostHogProvider, PostHogPageview } from '@/lib/posthog';
 
 export const metadata: Metadata = {
   title: 'LendTracker — Track Money Lent & Borrowed',
@@ -29,11 +30,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <main>{children}</main>
-        <BottomNav />
-        <RegisterSW />
+    <html lang="en" className="dark">
+      <body className="pb-20">
+        <PostHogProvider>
+          <Suspense fallback={null}>
+            <PostHogPageview />
+          </Suspense>
+          <main>{children}</main>
+          <BottomNav />
+        </PostHogProvider>
       </body>
     </html>
   );

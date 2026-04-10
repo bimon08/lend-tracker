@@ -2,126 +2,123 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Search, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Users, Search, ArrowUpRight, ArrowDownLeft, Plus, Phone } from 'lucide-react';
 import { usePersonsWithSummaries } from '@/lib/hooks';
 import { formatCurrency, getInitials, getAvatarColor } from '@/lib/utils';
 import EmptyState from '@/components/EmptyState';
+import AddPersonModal from '@/components/AddPersonModal';
+import { useToast } from '@/components/Toast';
 
 export default function PeoplePage() {
   const router = useRouter();
-  const { data: persons, loading } = usePersonsWithSummaries();
+  const { data: persons, loading, refetch } = usePersonsWithSummaries();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddPerson, setShowAddPerson] = useState(false);
+  const { showToast, ToastElement } = useToast();
 
-  const filtered = (persons || []).filter((p) => {
-    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      return false;
-    return true;
-  });
+  const filtered = (persons || []).filter((p) =>
+    !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">People</h1>
-          <p className="page-subtitle">Everyone you transact with</p>
-        </div>
+    <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
+      <div className="mb-5 py-1">
+        <h1 className="text-2xl font-bold tracking-tight">People</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Everyone you transact with</p>
       </div>
 
       {/* Search */}
-      <div className="search-input-wrapper">
-        <Search size={16} className="search-icon" />
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
         <input
           type="text"
-          className="form-input"
           placeholder="Search people..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-10 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
           id="search-people"
         />
       </div>
 
-      {/* Person List */}
       {loading ? (
-        <div className="transaction-list">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton skeleton-card" />
-          ))}
+        <div className="flex flex-col gap-2.5">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton skeleton-card" />)}
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={28} />}
           title={searchQuery ? 'No results' : 'No people yet'}
-          description={
-            searchQuery
-              ? 'Try a different search term'
-              : 'Add a transaction to see people here'
-          }
+          description={searchQuery ? 'Try a different search term' : 'Add a transaction to see people here'}
         />
       ) : (
-        <div className="transaction-list">
+        <div className="flex flex-col gap-2.5">
           {filtered.map((person) => {
             const net = person.lentOutstanding - person.borrowedOutstanding;
             return (
               <div
                 key={person.id}
-                className="card card-clickable person-card animate-in"
+                className="animate-in flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-colors hover:bg-slate-800/60 active:scale-[0.98]"
                 onClick={() => router.push(`/person/${person.id}`)}
                 id={`person-${person.id}`}
               >
                 <div
-                  className="person-avatar"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
                   style={{ background: getAvatarColor(person.name) }}
                 >
                   {getInitials(person.name)}
                 </div>
-                <div className="person-info">
-                  <div className="person-name">{person.name}</div>
-                  <div className="person-stats">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{person.name}</p>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs">
                     {person.lentOutstanding > 0 && (
-                      <>
-                        <span style={{ color: 'var(--color-lend)', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <ArrowUpRight size={10} />
-                          {formatCurrency(person.lentOutstanding)}
-                        </span>
-                      </>
+                      <span className="flex items-center gap-0.5 text-emerald-500">
+                        <ArrowUpRight size={10} /> {formatCurrency(person.lentOutstanding)}
+                      </span>
                     )}
                     {person.lentOutstanding > 0 && person.borrowedOutstanding > 0 && (
-                      <span className="dot" />
+                      <span className="h-1 w-1 rounded-full bg-slate-600" />
                     )}
                     {person.borrowedOutstanding > 0 && (
-                      <span style={{ color: 'var(--color-borrow)', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                        <ArrowDownLeft size={10} />
-                        {formatCurrency(person.borrowedOutstanding)}
+                      <span className="flex items-center gap-0.5 text-amber-500">
+                        <ArrowDownLeft size={10} /> {formatCurrency(person.borrowedOutstanding)}
                       </span>
                     )}
                     {person.lentOutstanding === 0 && person.borrowedOutstanding === 0 && (
-                      <span className="status-badge settled">All Settled</span>
+                      <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-500">
+                        All Settled
+                      </span>
                     )}
                   </div>
                 </div>
-                <div className="person-balance">
-                  <div
-                    className="person-balance-amount"
-                    style={{
-                      color:
-                        net > 0
-                          ? 'var(--color-lend-light)'
-                          : net < 0
-                          ? 'var(--color-borrow-light)'
-                          : 'var(--color-text-tertiary)',
-                    }}
-                  >
+                <div className="shrink-0 text-right">
+                  <p className="text-base font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#64748b' }}>
                     {net >= 0 ? '+' : ''}{formatCurrency(net)}
-                  </div>
-                  <div className="person-balance-label">
+                  </p>
+                  <p className="text-[0.7rem] text-slate-500">
                     {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
-                  </div>
+                  </p>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      <AddPersonModal
+        isOpen={showAddPerson}
+        onClose={() => setShowAddPerson(false)}
+        onSuccess={() => { refetch(); showToast('Person added!'); }}
+      />
+
+      {/* FAB */}
+      <button
+        className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/30 transition-transform active:scale-90"
+        onClick={() => setShowAddPerson(true)}
+        id="fab-people"
+      >
+        <Plus size={24} className="text-white" />
+      </button>
+      {ToastElement}
     </div>
   );
 }

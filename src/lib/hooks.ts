@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { dataLayer, type Person, type Transaction, type Payment } from './db';
+import { dataLayer, type Person, type Transaction, type Payment, type Subscription } from './db';
 
 // ─── Generic async data hook ─────────────────────────────────────────────────
 
@@ -147,4 +147,13 @@ export function useTransactionWithDetails(txnId: string) {
       payments,
     } as TransactionWithDetails;
   }, [txnId]);
+}
+
+// ─── Subscription Hook ───────────────────────────────────────────────────────
+
+export function useSubscription() {
+  return useAsyncData<Subscription>(
+    () => dataLayer.getOrCreateSubscription(),
+    []
+  );
 }

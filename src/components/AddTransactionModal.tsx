@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { Button } from '@heroui/react';
 import { dataLayer } from '@/lib/db';
 import { generateId, formatInputDate } from '@/lib/utils';
 import type { Person } from '@/lib/db';
@@ -57,7 +57,6 @@ export default function AddTransactionModal({
 
     setLoading(true);
     try {
-      // Find or create person
       let person = await dataLayer.getPersonByName(personName.trim());
       if (!person) {
         person = {
@@ -68,7 +67,6 @@ export default function AddTransactionModal({
         await dataLayer.addPerson(person);
       }
 
-      // Create transaction
       await dataLayer.addTransaction({
         id: generateId(),
         personId: person.id,
@@ -93,149 +91,151 @@ export default function AddTransactionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose} id="add-transaction-modal">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-handle" />
-        <div className="modal-header">
-          <h2 className="modal-title">
-            {type === 'lend' ? 'Lend Money' : 'Borrow Money'}
-          </h2>
-          <button className="modal-close" onClick={onClose} id="modal-close-btn">
-            <X size={20} />
-          </button>
-        </div>
+    <div
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="animate-in w-full max-w-lg rounded-t-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:mx-4 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-5 text-lg font-bold text-slate-100">
+          {type === 'lend' ? 'Lend Money' : 'Borrow Money'}
+        </h3>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Type Toggle */}
-          <div className="type-toggle">
+          <div className="flex gap-2 rounded-xl bg-slate-800/60 p-1">
             <button
               type="button"
-              className={`type-toggle-btn lend ${type === 'lend' ? 'active' : ''}`}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+                type === 'lend'
+                  ? 'bg-emerald-500/20 text-emerald-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
               onClick={() => setType('lend')}
-              id="toggle-lend"
             >
               I&apos;m Lending
             </button>
             <button
               type="button"
-              className={`type-toggle-btn borrow ${type === 'borrow' ? 'active' : ''}`}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+                type === 'borrow'
+                  ? 'bg-amber-500/20 text-amber-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
               onClick={() => setType('borrow')}
-              id="toggle-borrow"
             >
               I&apos;m Borrowing
             </button>
           </div>
 
           {/* Person Name */}
-          <div className="form-group">
-            <label className="form-label">
+          <div className="relative">
+            <label className="mb-1.5 block text-xs font-medium text-slate-400">
               {type === 'lend' ? 'Lending To' : 'Borrowing From'}
             </label>
-            <div className="autocomplete-wrapper">
-              <input
-                ref={inputRef}
-                type="text"
-                className="form-input"
-                placeholder="Enter person's name"
-                value={personName}
-                onChange={(e) => {
-                  setPersonName(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                required
-                id="input-person-name"
-              />
-              {showSuggestions && filteredPersons.length > 0 && (
-                <div className="autocomplete-list">
-                  {filteredPersons.map((p) => (
-                    <div
-                      key={p.id}
-                      className="autocomplete-item"
-                      onClick={() => {
-                        setPersonName(p.name);
-                        setShowSuggestions(false);
-                      }}
-                    >
-                      {p.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Enter person's name"
+              value={personName}
+              onChange={(e) => { setPersonName(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              required
+              className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus:border-violet-500/50"
+              id="input-person-name"
+            />
+            {showSuggestions && filteredPersons.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-white/10 bg-slate-800">
+                {filteredPersons.map((p) => (
+                  <div
+                    key={p.id}
+                    className="cursor-pointer px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700"
+                    onClick={() => { setPersonName(p.name); setShowSuggestions(false); }}
+                  >
+                    {p.name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Amount */}
-          <div className="form-group">
-            <label className="form-label">Amount</label>
-            <div className="form-input-with-icon">
-              <span className="form-input-icon">₹</span>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-400">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
               <input
                 type="number"
-                className="form-input"
                 placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                min="1"
+                min={1}
                 step="any"
                 required
+                className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
                 id="input-amount"
               />
             </div>
           </div>
 
           {/* Date Row */}
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Date</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-400">Date</label>
               <input
                 type="date"
-                className="form-input"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                id="input-date"
+                className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500/50"
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Due Date (optional)</label>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-400">Due Date</label>
               <input
                 type="date"
-                className="form-input"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                id="input-due-date"
+                className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500/50"
               />
             </div>
           </div>
 
           {/* Note */}
-          <div className="form-group">
-            <label className="form-label">Note (optional)</label>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-400">Note (optional)</label>
             <input
               type="text"
-              className="form-input"
               placeholder="What's it for?"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              id="input-note"
+              className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
             />
           </div>
 
           {/* Submit */}
-          <button
+          <Button
             type="submit"
-            className={`btn ${type === 'lend' ? 'btn-lend' : 'btn-borrow'}`}
-            disabled={loading}
+            isDisabled={loading}
+            className={`w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] ${
+              type === 'lend'
+                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500'
+                : 'bg-gradient-to-r from-amber-600 to-amber-500'
+            }`}
             id="submit-transaction"
           >
-            {loading
-              ? 'Adding...'
-              : type === 'lend'
-              ? 'Record Lending'
-              : 'Record Borrowing'}
-          </button>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Saving...
+              </span>
+            ) : (
+              type === 'lend' ? 'Record Lending' : 'Record Borrowing'
+            )}
+          </Button>
         </form>
       </div>
     </div>

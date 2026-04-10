@@ -1,57 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 
-interface ToastProps {
+type ToastType = 'success' | 'error' | 'info';
+
+interface ToastState {
   message: string;
-  type?: 'success' | 'error';
-  duration?: number;
-  onClose: () => void;
+  type: ToastType;
+  visible: boolean;
 }
-
-export default function Toast({
-  message,
-  type = 'success',
-  duration = 2500,
-  onClose,
-}: ToastProps) {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-      setTimeout(onClose, 300);
-    }, duration);
-    return () => clearTimeout(timer);
-  }, [duration, onClose]);
-
-  if (!visible) return null;
-
-  return (
-    <div className={`toast ${type}`} id="toast">
-      {message}
-    </div>
-  );
-}
-
-// ─── Toast Manager Hook ──────────────────────────────────────────────────────
 
 export function useToast() {
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [toast, setToast] = useState<ToastState>({
+    message: '',
+    type: 'success',
+    visible: false,
+  });
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-  };
+  const showToast = useCallback(
+    (message: string, type: ToastType = 'success') => {
+      setToast({ message, type, visible: true });
+      setTimeout(() => setToast((prev) => ({ ...prev, visible: false })), 2500);
+    },
+    []
+  );
 
-  const ToastElement = toast ? (
-    <Toast
-      message={toast.message}
-      type={toast.type}
-      onClose={() => setToast(null)}
-    />
+  const bgColor =
+    toast.type === 'success'
+      ? 'bg-emerald-500/90'
+      : toast.type === 'error'
+      ? 'bg-red-500/90'
+      : 'bg-blue-500/90';
+
+  const ToastElement: ReactNode = toast.visible ? (
+    <div
+      className={`fixed left-1/2 top-4 z-[9999] -translate-x-1/2 animate-in rounded-full ${bgColor} px-5 py-2.5 text-sm font-medium text-white shadow-lg backdrop-blur-sm`}
+    >
+      {toast.message}
+    </div>
   ) : null;
 
   return { showToast, ToastElement };

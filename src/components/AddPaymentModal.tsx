@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Button } from '@heroui/react';
+import { formatCurrency, formatInputDate, generateId } from '@/lib/utils';
 import { dataLayer } from '@/lib/db';
-import { generateId, formatInputDate, formatCurrency } from '@/lib/utils';
 
 interface AddPaymentModalProps {
   isOpen: boolean;
@@ -49,7 +49,6 @@ export default function AddPaymentModal({
         note: note.trim() || undefined,
         createdAt: new Date(),
       });
-
       onSuccess();
       onClose();
     } catch (error) {
@@ -59,129 +58,91 @@ export default function AddPaymentModal({
     }
   };
 
-  const setFullAmount = () => {
-    setAmount(String(outstanding));
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose} id="add-payment-modal">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-handle" />
-        <div className="modal-header">
-          <h2 className="modal-title">Record Payment</h2>
-          <button className="modal-close" onClick={onClose} id="payment-modal-close">
-            <X size={20} />
-          </button>
-        </div>
+    <div
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="animate-in w-full max-w-lg rounded-t-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:mx-4 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-4 text-lg font-bold text-slate-100">Record Payment</h3>
 
-        <div
-          style={{
-            background: 'var(--bg-elevated)',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        {/* Outstanding badge */}
+        <div className="mb-5 flex items-center justify-between rounded-xl bg-slate-800/60 px-4 py-3">
+          <span className="text-xs text-slate-400">Outstanding</span>
           <span
-            style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}
-          >
-            Outstanding
-          </span>
-          <span
-            style={{
-              fontSize: '1rem',
-              fontWeight: 700,
-              color:
-                transactionType === 'lend'
-                  ? 'var(--color-lend-light)'
-                  : 'var(--color-borrow-light)',
-            }}
+            className="text-base font-bold"
+            style={{ color: transactionType === 'lend' ? '#34d399' : '#fbbf24' }}
           >
             {formatCurrency(outstanding)}
           </span>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Amount */}
-          <div className="form-group">
-            <label className="form-label">Payment Amount</label>
-            <div className="form-input-with-icon">
-              <span className="form-input-icon">₹</span>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-400">Payment Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
               <input
                 type="number"
-                className="form-input"
                 placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                min="1"
+                min={1}
                 max={outstanding}
                 step="any"
                 required
-                id="input-payment-amount"
+                className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
               />
             </div>
             {outstanding > 0 && (
               <button
                 type="button"
-                onClick={setFullAmount}
-                style={{
-                  marginTop: '8px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'var(--color-info)',
-                  padding: '4px 8px',
-                  borderRadius: 'var(--radius-sm)',
-                  transition: 'var(--transition-fast)',
-                }}
-                id="btn-full-amount"
+                onClick={() => setAmount(String(outstanding))}
+                className="mt-2 text-xs font-semibold text-blue-400 hover:text-blue-300"
               >
                 Pay Full Amount ({formatCurrency(outstanding)})
               </button>
             )}
           </div>
 
-          {/* Date */}
-          <div className="form-group">
-            <label className="form-label">Payment Date</label>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-400">Payment Date</label>
             <input
               type="date"
-              className="form-input"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              id="input-payment-date"
+              className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500/50"
             />
           </div>
 
-          {/* Note */}
-          <div className="form-group">
-            <label className="form-label">Note (optional)</label>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-400">Note (optional)</label>
             <input
               type="text"
-              className="form-input"
               placeholder="Payment note..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              id="input-payment-note"
+              className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
             />
           </div>
 
-          {/* Submit */}
-          <button
+          <Button
             type="submit"
-            className={`btn ${
-              transactionType === 'lend' ? 'btn-lend' : 'btn-borrow'
+            isDisabled={loading}
+            className={`w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] ${
+              transactionType === 'lend'
+                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500'
+                : 'bg-gradient-to-r from-amber-600 to-amber-500'
             }`}
-            disabled={loading}
-            id="submit-payment"
           >
             {loading ? 'Recording...' : 'Record Payment'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

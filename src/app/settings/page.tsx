@@ -1,23 +1,45 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, Button } from '@heroui/react';
 import {
   Download,
   Upload,
   Trash2,
   ChevronRight,
-  Database,
+  Cloud,
   Info,
+  LogOut,
+  User,
+  Crown,
+  UsersRound,
 } from 'lucide-react';
 import { dataLayer } from '@/lib/db';
+import { createClient } from '@/lib/supabase/client';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast, ToastElement } = useToast();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserEmail(user.email || null);
+        setUserName(user.user_metadata?.full_name || user.user_metadata?.name || null);
+        setUserAvatar(user.user_metadata?.avatar_url || null);
+      }
+    });
+  }, []);
 
   const handleExport = async () => {
     try {
@@ -69,112 +91,184 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  const SettingsItem = ({
+    icon: Icon,
+    title,
+    subtitle,
+    onClick,
+    danger,
+    id,
+    children,
+  }: {
+    icon: React.ElementType;
+    title: string;
+    subtitle: string;
+    onClick?: () => void;
+    danger?: boolean;
+    id?: string;
+    children?: React.ReactNode;
+  }) => (
+    <div
+      className={`flex items-center gap-3.5 rounded-xl px-3.5 py-3 transition-colors ${
+        onClick ? 'cursor-pointer hover:bg-white/5 active:scale-[0.99]' : ''
+      } ${danger ? 'hover:bg-red-500/5' : ''}`}
+      onClick={onClick}
+      id={id}
+    >
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
+          danger ? 'bg-red-500/10 text-red-400' : 'bg-slate-700/50 text-slate-400'
+        }`}
+      >
+        <Icon size={18} />
+      </div>
+      <div className="flex-1">
+        <p className={`text-sm font-medium ${danger ? 'text-red-400' : 'text-slate-200'}`}>
+          {title}
+        </p>
+        <p className="text-xs text-slate-500">{subtitle}</p>
+      </div>
+      {children}
+      {onClick && <ChevronRight size={16} className="text-slate-600" />}
+    </div>
+  );
+
   return (
-    <div className="page-container">
+    <div className="mx-auto max-w-lg px-4 pt-2">
       {ToastElement}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle">Manage your data</p>
-        </div>
+      <div className="mb-5 py-1">
+        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Manage your account &amp; data</p>
+      </div>
+
+      {/* Account */}
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Account
+        </p>
+        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
+          <SettingsItem
+            icon={() => (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
+                {(userName || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            title={userName || 'User'}
+            subtitle={userEmail || 'Loading...'}
+          />
+          <SettingsItem
+            icon={LogOut}
+            title="Sign Out"
+            subtitle="Sign out of your account"
+            onClick={handleSignOut}
+            id="sign-out-btn"
+          />
+        </Card>
+      </div>
+
+      {/* Subscription */}
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Subscription
+        </p>
+        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
+          <SettingsItem
+            icon={Crown}
+            title="Manage Plan"
+            subtitle="View pricing, trial status & upgrade"
+            onClick={() => router.push('/pricing')}
+            id="manage-plan"
+          />
+        </Card>
+      </div>
+
+      {/* Employee Access */}
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Team
+        </p>
+        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
+          <SettingsItem
+            icon={UsersRound}
+            title="Employee Access"
+            subtitle="Generate access codes & review changes"
+            onClick={() => router.push('/employees')}
+            id="employee-access"
+          />
+        </Card>
       </div>
 
       {/* Data Management */}
-      <div className="settings-group">
-        <div className="settings-group-title">Data Management</div>
-
-        <div className="settings-item" onClick={handleExport} id="export-data">
-          <div className="settings-item-icon">
-            <Download size={18} />
-          </div>
-          <div className="settings-item-info">
-            <div className="settings-item-title">Export Data</div>
-            <div className="settings-item-subtitle">
-              Download all data as JSON backup
-            </div>
-          </div>
-          <ChevronRight size={16} className="settings-item-chevron" />
-        </div>
-
-        <div
-          className="settings-item"
-          onClick={() => fileInputRef.current?.click()}
-          id="import-data"
-        >
-          <div className="settings-item-icon">
-            <Upload size={18} />
-          </div>
-          <div className="settings-item-info">
-            <div className="settings-item-title">
-              {importing ? 'Importing...' : 'Import Data'}
-            </div>
-            <div className="settings-item-subtitle">
-              Restore from a JSON backup file
-            </div>
-          </div>
-          <ChevronRight size={16} className="settings-item-chevron" />
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Data Management
+        </p>
+        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
+          <SettingsItem
+            icon={Download}
+            title="Export Data"
+            subtitle="Download all data as JSON backup"
+            onClick={handleExport}
+            id="export-data"
+          />
+          <SettingsItem
+            icon={Upload}
+            title={importing ? 'Importing...' : 'Import Data'}
+            subtitle="Restore from a JSON backup file"
+            onClick={() => fileInputRef.current?.click()}
+            id="import-data"
+          />
           <input
             ref={fileInputRef}
             type="file"
             accept=".json"
             onChange={handleImport}
-            style={{ display: 'none' }}
+            className="hidden"
           />
-        </div>
+        </Card>
       </div>
 
       {/* About */}
-      <div className="settings-group">
-        <div className="settings-group-title">About</div>
-
-        <div className="settings-item" style={{ cursor: 'default' }}>
-          <div className="settings-item-icon">
-            <Database size={18} />
-          </div>
-          <div className="settings-item-info">
-            <div className="settings-item-title">Storage</div>
-            <div className="settings-item-subtitle">
-              Data stored locally on this device (IndexedDB)
-            </div>
-          </div>
-        </div>
-
-        <div className="settings-item" style={{ cursor: 'default' }}>
-          <div className="settings-item-icon">
-            <Info size={18} />
-          </div>
-          <div className="settings-item-info">
-            <div className="settings-item-title">LendTracker</div>
-            <div className="settings-item-subtitle">
-              v1.0.0 · Made with ❤️
-            </div>
-          </div>
-        </div>
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          About
+        </p>
+        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
+          <SettingsItem
+            icon={Cloud}
+            title="Storage"
+            subtitle="Cloud synced (Supabase) — access from any device"
+          />
+          <SettingsItem
+            icon={Info}
+            title="LendTracker"
+            subtitle="v2.0.0 · Cloud Edition · by Pixel Thread"
+          />
+        </Card>
       </div>
 
       {/* Danger Zone */}
-      <div className="settings-group">
-        <div className="settings-group-title" style={{ color: 'var(--color-danger)' }}>
+      <div className="mb-6">
+        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-red-400">
           Danger Zone
-        </div>
-
-        <div
-          className="settings-item danger"
-          onClick={() => setShowClearConfirm(true)}
-          id="clear-all-data"
-        >
-          <div className="settings-item-icon">
-            <Trash2 size={18} />
-          </div>
-          <div className="settings-item-info">
-            <div className="settings-item-title">Clear All Data</div>
-            <div className="settings-item-subtitle">
-              Permanently delete everything. Cannot be undone.
-            </div>
-          </div>
-          <ChevronRight size={16} className="settings-item-chevron" />
-        </div>
+        </p>
+        <Card className="overflow-hidden border border-red-500/10 bg-slate-800/40 p-1">
+          <SettingsItem
+            icon={Trash2}
+            title="Clear All Data"
+            subtitle="Permanently delete everything. Cannot be undone."
+            onClick={() => setShowClearConfirm(true)}
+            danger
+            id="clear-all-data"
+          />
+        </Card>
       </div>
 
       <ConfirmDialog
