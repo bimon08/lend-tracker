@@ -920,35 +920,26 @@ export async function isAdmin(): Promise<boolean> {
   return !!user?.email && ADMIN_EMAILS.includes(user.email);
 }
 
-export function isProUser(sub: Subscription | null, email?: string | null): boolean {
-  // Admin is always pro
-  if (email && ADMIN_EMAILS.includes(email)) return true;
-  if (!sub) return false;
-  if (sub.plan === 'pro' && sub.status === 'active') return true;
-  if (sub.status === 'trialing' && sub.trialEnd && new Date() < sub.trialEnd) return true;
+// Everything is free — always returns true
+export function isProUser(_sub?: Subscription | null, _email?: string | null): boolean {
+  return true;
+}
+
+export function getTrialDaysLeft(_sub: Subscription | null): number {
+  return 0;
+}
+
+export function isTrialExpired(_sub: Subscription | null): boolean {
   return false;
 }
 
-export function getTrialDaysLeft(sub: Subscription | null): number {
-  if (!sub || sub.status !== 'trialing' || !sub.trialEnd) return 0;
-  const now = new Date();
-  const diff = sub.trialEnd.getTime() - now.getTime();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-}
-
-export function isTrialExpired(sub: Subscription | null): boolean {
-  if (!sub) return false;
-  if (sub.status === 'trialing' && sub.trialEnd && new Date() >= sub.trialEnd) return true;
-  return sub.status === 'expired';
-}
-
-// ─── Free Tier Limits ─────────────────────────────────────────────────────────
+// ─── No Limits — Everything is Free ───────────────────────────────────────────
 
 export const FREE_LIMITS = {
-  maxPeople: 5,
-  maxTransactions: 10,
-  canExport: false,
-  canImport: false,
+  maxPeople: Infinity,
+  maxTransactions: Infinity,
+  canExport: true,
+  canImport: true,
 };
 
 export const PRO_FEATURES = {

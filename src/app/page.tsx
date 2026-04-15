@@ -9,10 +9,9 @@ import {
   Scale,
   Plus,
   Clock,
-  Crown,
 } from 'lucide-react';
-import { useSummary, useRecentTransactions, useSubscription } from '@/lib/hooks';
-import { dataLayer, isProUser, getTrialDaysLeft, isTrialExpired } from '@/lib/db';
+import { useSummary, useRecentTransactions } from '@/lib/hooks';
+import { dataLayer } from '@/lib/db';
 import {
   formatCurrency,
   formatRelativeDate,
@@ -29,7 +28,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { data: summary, loading: summaryLoading, refetch: refetchSummary } = useSummary();
   const { data: recentTxns, loading: recentLoading, refetch: refetchRecent } = useRecentTransactions(8);
-  const { data: subscription } = useSubscription();
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [defaultType, setDefaultType] = useState<'lend' | 'borrow'>('lend');
   const [personNames, setPersonNames] = useState<Map<string, string>>(new Map());
@@ -129,43 +128,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Trial Banner */}
-      {subscription?.status === 'trialing' && getTrialDaysLeft(subscription) > 0 && (
-        <div
-          className="animate-in mb-4 cursor-pointer overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-pink-500/10 p-3.5"
-          onClick={() => router.push('/pricing')}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-purple-600">
-              <Crown size={16} className="text-amber-300" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-semibold text-violet-300">
-                Pro Trial · {getTrialDaysLeft(subscription)} days left
-              </p>
-              <p className="text-[0.7rem] text-slate-400">Tap to see plans</p>
-            </div>
-            <span className="rounded-full bg-violet-500/20 px-2.5 py-1 text-[0.65rem] font-bold text-violet-300">PRO</span>
-          </div>
-        </div>
-      )}
 
-      {isTrialExpired(subscription) && (
-        <div
-          className="animate-in mb-4 cursor-pointer overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-r from-red-500/10 to-pink-500/10 p-3.5"
-          onClick={() => router.push('/pricing')}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/20">
-              <Crown size={16} className="text-red-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-semibold text-red-300">Pro trial expired</p>
-              <p className="text-[0.7rem] text-slate-400">Upgrade to keep unlimited access</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Summary Cards */}
       <div className="animate-in mb-6 grid grid-cols-2 gap-3">

@@ -12,7 +12,6 @@ import {
   Info,
   LogOut,
   User,
-  Crown,
   UsersRound,
 } from 'lucide-react';
 import { dataLayer } from '@/lib/db';
@@ -173,21 +172,7 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      {/* Subscription */}
-      <div className="mb-4">
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Subscription
-        </p>
-        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
-          <SettingsItem
-            icon={Crown}
-            title="Manage Plan"
-            subtitle="View pricing, trial status & upgrade"
-            onClick={() => router.push('/pricing')}
-            id="manage-plan"
-          />
-        </Card>
-      </div>
+
 
       {/* Employee Access */}
       <div className="mb-4">
