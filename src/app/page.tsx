@@ -34,7 +34,20 @@ export default function DashboardPage() {
   const [txnOutstanding, setTxnOutstanding] = useState<Map<string, number>>(new Map());
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [hasPending, setHasPending] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const { showToast, ToastElement } = useToast();
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const loadPersonNames = useCallback(async () => {
     if (!recentTxns || recentTxns.length === 0) return;
@@ -108,7 +121,15 @@ export default function DashboardPage() {
 
       <div className="mb-5 flex items-center justify-between py-1">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">LendTracker</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+            LendTracker
+            {!isOnline && (
+              <span className="relative flex h-2.5 w-2.5" title="Offline — working locally">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+              </span>
+            )}
+          </h1>
           <p className="mt-0.5 text-sm text-slate-400">Your money, managed</p>
         </div>
       </div>

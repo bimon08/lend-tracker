@@ -36,20 +36,16 @@ export default function OfflineSyncBanner() {
     };
   }, []);
 
+  // Don't show banner when offline — indicated by dot on heading instead
+  if (!online) return null;
+
   // Nothing to show when everything is synced and online
-  if (status === 'idle' && pending === 0 && online && !justSynced) return null;
+  if (status === 'idle' && pending === 0 && !justSynced) return null;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center">
       <div className="mx-4 mt-[env(safe-area-inset-top,8px)] flex items-center gap-2 rounded-b-xl bg-slate-800/95 px-4 py-2 shadow-lg backdrop-blur-sm">
-        {!online ? (
-          <>
-            <CloudOff size={14} className="text-amber-400" />
-            <span className="text-xs font-medium text-amber-300">
-              Offline{pending > 0 ? ` · ${pending} change${pending > 1 ? 's' : ''} pending` : ' · Working locally'}
-            </span>
-          </>
-        ) : status === 'syncing' ? (
+        {status === 'syncing' ? (
           <>
             <Loader2 size={14} className="animate-spin text-violet-400" />
             <span className="text-xs font-medium text-violet-300">
