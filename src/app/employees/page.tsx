@@ -19,6 +19,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { dataLayer, type EmployeeKey, type PendingChange } from '@/lib/db';
+import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -324,11 +325,11 @@ export default function EmployeesPage() {
                     {change.changeType === 'add_transaction' && (
                       <>
                         <p>Type: <span className="text-slate-200">{String(change.payload.type)}</span></p>
-                        <p>Amount: <span className="text-slate-200">₹{String(change.payload.amount)}</span></p>
+                        <p>Amount: <span className="text-slate-200">{formatCurrency(Number(change.payload.amount))}</span></p>
                       </>
                     )}
                     {change.changeType === 'add_payment' && (
-                      <p>Amount: <span className="text-slate-200">₹{String(change.payload.amount)}</span></p>
+                      <p>Amount: <span className="text-slate-200">{formatCurrency(Number(change.payload.amount))}</span></p>
                     )}
                   </div>
 

@@ -9,6 +9,19 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Format a number string with Indian commas (for display on blur)
+export function formatAmountDisplay(value: string): string {
+  const num = Number(value.replace(/,/g, ''));
+  if (!num && num !== 0) return value;
+  if (num === 0) return '';
+  return new Intl.NumberFormat('en-IN').format(num);
+}
+
+// Parse a comma-formatted string back to a number
+export function parseAmountInput(value: string): number {
+  return Number(value.replace(/,/g, '')) || 0;
+}
+
 // ─── Date Formatting ─────────────────────────────────────────────────────────
 
 export function formatDate(date: Date): string {

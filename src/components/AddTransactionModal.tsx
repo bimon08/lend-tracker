@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@heroui/react';
 import { dataLayer } from '@/lib/db';
-import { generateId, formatInputDate } from '@/lib/utils';
+import { generateId, formatInputDate, parseAmountInput } from '@/lib/utils';
+import AmountInput from '@/components/AmountInput';
 import type { Person } from '@/lib/db';
 
 interface AddTransactionModalProps {
@@ -53,7 +54,7 @@ export default function AddTransactionModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!personName.trim() || !amount || Number(amount) <= 0) return;
+    if (!personName.trim() || !amount || parseAmountInput(amount) <= 0) return;
 
     setLoading(true);
     try {
@@ -71,7 +72,7 @@ export default function AddTransactionModal({
         id: generateId(),
         personId: person.id,
         type,
-        amount: Number(amount),
+        amount: parseAmountInput(amount),
         date: new Date(date),
         dueDate: dueDate ? new Date(dueDate) : undefined,
         note: note.trim() || undefined,
@@ -167,13 +168,10 @@ export default function AddTransactionModal({
             <label className="mb-1.5 block text-xs font-medium text-slate-400">Amount</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
-              <input
-                type="number"
-                placeholder="0"
+              <AmountInput
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min={1}
-                step="any"
+                onChange={setAmount}
+                placeholder="0"
                 required
                 className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
                 id="input-amount"
