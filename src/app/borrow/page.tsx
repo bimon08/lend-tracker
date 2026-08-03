@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@heroui/react';
 import { ArrowDownLeft, Plus, Search } from 'lucide-react';
 import { usePersonsWithSummaries } from '@/lib/hooks';
-import { formatCurrency, getInitials, getAvatarColor } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import EmptyState from '@/components/EmptyState';
+import UserAvatar from '@/components/UserAvatar';
 import { useToast } from '@/components/Toast';
 
 export default function BorrowPage() {
@@ -83,12 +84,7 @@ export default function BorrowPage() {
               onClick={() => router.push(`/person/${person.id}`)}
               id={`person-borrow-${person.id}`}
             >
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-                style={{ background: getAvatarColor(person.name) }}
-              >
-                {getInitials(person.name)}
-              </div>
+              <UserAvatar name={person.name} size={48} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{person.name}</p>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">

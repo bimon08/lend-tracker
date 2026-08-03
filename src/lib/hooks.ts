@@ -1,12 +1,74 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { localDb } from './localDb';
 import { dataLayer, type Person, type Transaction, type Payment, type Subscription } from './db';
-import { setCache, getCache } from './offline-cache';
 
-// ─── Generic async data hook with offline cache ──────────────────────────────
+// ─── Reactive hook: subscribes to IndexedDB changes via Dexie's hook ─────────
 
-function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = [], cacheKey?: string) {
+// Use a simple event system to notify hooks when data changes
+let changeCounter = 0;
+const changeListeners = new Set<() => void>();
+
+export function notifyDataChange() {
+  changeCounter++;
+  changeListeners.forEach(cb => cb());
+}
+
+function useDataRefresh() {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const cb = () => setTick(c => c + 1);
+    changeListeners.add(cb);
+    return () => { changeListeners.delete(cb); };
+  }, []);
+}
+
+// ─── Generic local data hook ─────────────────────────────────────────────────
+
+function useLocalData<T>(
+  fetcher: () => Promise<T>,
+  deps: unknown[] = []
+) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+
+  // Subscribe to data changes
+  useDataRefresh();
+
+  const refetch = useCallback(async () => {
+    try {
+      const result = await fetcher();
+      if (mountedRef.current) {
+        setData(result);
+        setLoading(false);
+        setError(null);
+      }
+    } catch (e) {
+      console.error('useLocalData error:', e);
+      if (mountedRef.current) {
+        setError(e instanceof Error ? e.message : 'Unknown error');
+        setLoading(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    refetch();
+    return () => { mountedRef.current = false; };
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
+}
+
+// ─── Generic async data hook (for online-only features) ──────────────────────
+
+function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,18 +79,7 @@ function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = [], cacheK
     try {
       const result = await fetcher();
       setData(result);
-      // Cache for offline use
-      if (cacheKey) setCache(cacheKey, result);
     } catch (e) {
-      // If offline, try to load from cache
-      if (cacheKey) {
-        const cached = getCache<T>(cacheKey);
-        if (cached) {
-          setData(cached);
-          setLoading(false);
-          return;
-        }
-      }
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -46,21 +97,63 @@ function useAsyncData<T>(fetcher: () => Promise<T>, deps: unknown[] = [], cacheK
 // ─── Dashboard Summary ──────────────────────────────────────────────────────
 
 export function useSummary() {
-  return useAsyncData(() => dataLayer.getSummary(), [], 'summary');
+  return useLocalData(async () => {
+    const activeTxns = (await localDb.transactions.toArray())
+      .filter(t => t._syncStatus !== 'deleted');
+    const paymentRows = (await localDb.payments.toArray())
+      .filter(p => p._syncStatus !== 'deleted');
+
+    const paymentsByTxn = new Map<string, number>();
+    for (const p of paymentRows) {
+      paymentsByTxn.set(p.transaction_id, (paymentsByTxn.get(p.transaction_id) || 0) + p.amount);
+    }
+
+    let totalLent = 0, totalBorrowed = 0,
+      totalLentOutstanding = 0, totalBorrowedOutstanding = 0,
+      activeLendCount = 0, activeBorrowCount = 0;
+
+    for (const txn of activeTxns) {
+      const paid = paymentsByTxn.get(txn.id) || 0;
+      const outstanding = Math.max(0, txn.amount - paid);
+
+      if (txn.type === 'lend') {
+        totalLent += txn.amount;
+        totalLentOutstanding += outstanding;
+        if (txn.status !== 'settled') activeLendCount++;
+      } else {
+        totalBorrowed += txn.amount;
+        totalBorrowedOutstanding += outstanding;
+        if (txn.status !== 'settled') activeBorrowCount++;
+      }
+    }
+
+    return {
+      totalLent, totalBorrowed,
+      totalLentOutstanding, totalBorrowedOutstanding,
+      netBalance: totalLentOutstanding - totalBorrowedOutstanding,
+      activeLendCount, activeBorrowCount,
+    };
+  });
 }
 
 // ─── Persons ─────────────────────────────────────────────────────────────────
 
 export function usePersons() {
-  return useAsyncData(() => dataLayer.getPersons(), [], 'persons');
+  return useLocalData(async () => {
+    return await dataLayer.getPersons();
+  });
 }
 
 export function usePerson(id: string) {
-  return useAsyncData(() => dataLayer.getPerson(id), [id], `person_${id}`);
+  return useLocalData(async () => {
+    return (await dataLayer.getPerson(id)) || null;
+  }, [id]);
 }
 
 export function usePersonSummary(personId: string) {
-  return useAsyncData(() => dataLayer.getPersonSummary(personId), [personId], `person_summary_${personId}`);
+  return useLocalData(async () => {
+    return await dataLayer.getPersonSummary(personId);
+  }, [personId]);
 }
 
 // ─── Transactions ────────────────────────────────────────────────────────────
@@ -70,25 +163,23 @@ export function useTransactions(filters?: {
   personId?: string;
   status?: 'pending' | 'partial' | 'settled';
 }) {
-  return useAsyncData(
-    () => dataLayer.getTransactions(filters),
-    [filters?.type, filters?.personId, filters?.status],
-    `txns_${filters?.type || 'all'}_${filters?.personId || 'all'}`
-  );
+  return useLocalData(async () => {
+    return await dataLayer.getTransactions(filters);
+  }, [filters?.type, filters?.personId, filters?.status]);
 }
 
 export function useRecentTransactions(limit: number = 10) {
-  return useAsyncData(() => dataLayer.getRecentTransactions(limit), [limit], `recent_txns_${limit}`);
+  return useLocalData(async () => {
+    return await dataLayer.getRecentTransactions(limit);
+  }, [limit]);
 }
 
 // ─── Payments ────────────────────────────────────────────────────────────────
 
 export function usePayments(transactionId: string) {
-  return useAsyncData(
-    () => dataLayer.getPayments(transactionId),
-    [transactionId],
-    `payments_${transactionId}`
-  );
+  return useLocalData(async () => {
+    return await dataLayer.getPayments(transactionId);
+  }, [transactionId]);
 }
 
 // ─── Persons with summaries (for list views) ─────────────────────────────────
@@ -103,14 +194,12 @@ export interface PersonWithSummary extends Person {
 }
 
 export function usePersonsWithSummaries(type?: 'lend' | 'borrow') {
-  return useAsyncData(async () => {
+  return useLocalData(async () => {
     const persons = await dataLayer.getPersons();
     const results: PersonWithSummary[] = [];
 
     for (const person of persons) {
       const txns = await dataLayer.getTransactions({ personId: person.id });
-      
-      // Filter by type if specified
       const relevantTxns = type ? txns.filter(t => t.type === type) : txns;
       if (relevantTxns.length === 0 && type) continue;
 
@@ -122,7 +211,6 @@ export function usePersonsWithSummaries(type?: 'lend' | 'borrow') {
       });
     }
 
-    // Sort by outstanding balance (highest first)
     return results.sort((a, b) => {
       const aOutstanding = type === 'borrow' ? b.borrowedOutstanding : b.lentOutstanding;
       const bOutstanding = type === 'borrow' ? a.borrowedOutstanding : a.lentOutstanding;
@@ -142,16 +230,16 @@ export interface TransactionWithDetails extends Transaction {
 }
 
 export function useTransactionWithDetails(txnId: string) {
-  return useAsyncData(async () => {
+  return useLocalData(async () => {
     const txn = await dataLayer.getTransaction(txnId);
     if (!txn) return null;
-    
+
     const person = await dataLayer.getPerson(txn.personId);
     const payments = await dataLayer.getPayments(txnId);
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     const outstanding = Math.max(0, txn.amount - totalPaid);
     const progress = txn.amount > 0 ? Math.min(100, (totalPaid / txn.amount) * 100) : 100;
-    
+
     return {
       ...txn,
       personName: person?.name || 'Unknown',
@@ -163,7 +251,7 @@ export function useTransactionWithDetails(txnId: string) {
   }, [txnId]);
 }
 
-// ─── Subscription Hook ───────────────────────────────────────────────────────
+// ─── Subscription Hook (online-only) ─────────────────────────────────────────
 
 export function useSubscription() {
   return useAsyncData<Subscription>(

@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Search, ArrowUpRight, ArrowDownLeft, Plus, Phone } from 'lucide-react';
 import { usePersonsWithSummaries } from '@/lib/hooks';
-import { formatCurrency, getInitials, getAvatarColor } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import EmptyState from '@/components/EmptyState';
 import AddPersonModal from '@/components/AddPersonModal';
+import UserAvatar from '@/components/UserAvatar';
 import { useToast } from '@/components/Toast';
 
 export default function PeoplePage() {
@@ -61,12 +62,7 @@ export default function PeoplePage() {
                 onClick={() => router.push(`/person/${person.id}`)}
                 id={`person-${person.id}`}
               >
-                <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-                  style={{ background: getAvatarColor(person.name) }}
-                >
-                  {getInitials(person.name)}
-                </div>
+                <UserAvatar name={person.name} size={48} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{person.name}</p>
                   <div className="mt-1 flex items-center gap-1.5 text-xs">

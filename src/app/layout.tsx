@@ -4,6 +4,7 @@ import './globals.css';
 import BottomNav from '@/components/BottomNav';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import OfflineSyncBanner from '@/components/OfflineSyncBanner';
+import SyncInitializer from '@/components/SyncInitializer';
 import { PostHogProvider, PostHogPageview } from '@/lib/posthog';
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default function RootLayout({
           <BottomNav />
           <PWAInstallPrompt />
           <OfflineSyncBanner />
+          <SyncInitializer />
         </PostHogProvider>
       </body>
     </html>

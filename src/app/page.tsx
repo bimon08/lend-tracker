@@ -15,12 +15,11 @@ import { dataLayer } from '@/lib/db';
 import {
   formatCurrency,
   formatRelativeDate,
-  getInitials,
-  getAvatarColor,
   getStatusLabel,
 } from '@/lib/utils';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import EmptyState from '@/components/EmptyState';
+import UserAvatar from '@/components/UserAvatar';
 import { useToast } from '@/components/Toast';
 import PendingChangesModal from '@/components/PendingChangesModal';
 
@@ -43,26 +42,12 @@ export default function DashboardPage() {
     const outstanding = new Map<string, number>();
     for (const txn of recentTxns) {
       if (!names.has(txn.personId)) {
-        try {
-          const person = await dataLayer.getPerson(txn.personId);
-          if (person) names.set(person.id, person.name);
-        } catch {
-          // Offline — try to get from cached persons list
-          const { getCache } = await import('@/lib/offline-cache');
-          const cached = getCache<{ id: string; name: string }[]>('persons');
-          if (cached) {
-            const p = cached.find((c) => c.id === txn.personId);
-            if (p) names.set(p.id, p.name);
-          }
-        }
+        const person = await dataLayer.getPerson(txn.personId);
+        if (person) names.set(person.id, person.name);
       }
-      try {
-        const payments = await dataLayer.getPayments(txn.id);
-        const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-        outstanding.set(txn.id, Math.max(0, txn.amount - totalPaid));
-      } catch {
-        outstanding.set(txn.id, txn.amount); // Assume unresolved if offline
-      }
+      const payments = await dataLayer.getPayments(txn.id);
+      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      outstanding.set(txn.id, Math.max(0, txn.amount - totalPaid));
     }
     setPersonNames(names);
     setTxnOutstanding(outstanding);
@@ -212,7 +197,17 @@ export default function DashboardPage() {
         />
       ) : (
         <div className="flex flex-col gap-2.5">
-          {recentTxns.map((txn) => {
+          {[...recentTxns]
+            .filter((txn) => {
+              const outstanding = txnOutstanding.get(txn.id) ?? txn.amount;
+              return outstanding > 0;
+            })
+            .sort((a, b) => {
+              const aOut = txnOutstanding.get(a.id) ?? a.amount;
+              const bOut = txnOutstanding.get(b.id) ?? b.amount;
+              return bOut - aOut;
+            })
+            .map((txn) => {
             const name = personNames.get(txn.personId) || '...';
             const outstanding = txnOutstanding.get(txn.id) ?? txn.amount;
             return (
@@ -222,12 +217,7 @@ export default function DashboardPage() {
                 onClick={() => router.push(`/transaction/${txn.id}`)}
                 id={`txn-${txn.id}`}
               >
-                <div
-                  className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
-                  style={{ background: getAvatarColor(name) }}
-                >
-                  {getInitials(name)}
-                </div>
+                <UserAvatar name={name} size={42} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{name}</p>
                   <div className="mt-0.5 flex items-center gap-2">

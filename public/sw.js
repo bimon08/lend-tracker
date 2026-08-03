@@ -1,33 +1,25 @@
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const CACHE_NAME = `lendtracker-v${CACHE_VERSION}`;
 
-// Pre-cache app shell for offline access
-const APP_SHELL = [
-  '/',
-  '/lend',
-  '/borrow',
-  '/people',
-  '/settings',
-  '/login',
-  '/pricing',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-];
-
-// Install — cache the app shell
+// Install — don't fail if some assets are missing
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL).catch((err) => {
-        console.warn('SW: Failed to cache some shell assets:', err);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Cache each URL individually so one failure doesn't block others
+      const urls = ['/', '/lend', '/borrow', '/people', '/settings', '/login'];
+      for (const url of urls) {
+        try {
+          await cache.add(url);
+        } catch (e) {
+          console.warn(`SW: Failed to cache ${url}:`, e);
+        }
+      }
     })
   );
   self.skipWaiting();
 });
 
-// Activate — delete ALL old caches
+// Activate — delete ALL old caches, then cache the current page
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -46,18 +38,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET, cross-origin, dev requests
+  // Skip non-GET, cross-origin, HMR
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/_next/webpack-hmr')) return;
 
-  // API calls — always network, never cache
+  // API calls — always network
   if (url.pathname.startsWith('/api/')) return;
 
   // Supabase calls — never cache
   if (url.hostname.includes('supabase')) return;
 
-  // Static assets with hashes (_next/static) — cache first (immutable)
+  // Static assets with hashes — cache first (immutable)
   if (url.pathname.startsWith('/_next/static')) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -72,26 +64,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else (pages, RSC payloads, assets) — network first, cache fallback
+  // Everything else — stale-while-revalidate for better offline support
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        // Cache the fresh response for offline fallback
-        if (response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(request).then((cached) => {
-          if (cached) return cached;
-          // For navigation, fall back to cached home page
-          if (request.mode === 'navigate') {
-            return caches.match('/');
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cached = await cache.match(request);
+
+      // Always try fetching fresh version
+      const fetchPromise = fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            cache.put(request, response.clone());
           }
-          return new Response('Offline', { status: 503 });
-        });
-      })
+          return response;
+        })
+        .catch(() => null);
+
+      // If we have a cached version, return it immediately
+      // The fetch will update the cache in the background
+      if (cached) {
+        fetchPromise; // fire and forget the background update
+        return cached;
+      }
+
+      // No cached version — wait for network
+      const networkResponse = await fetchPromise;
+      if (networkResponse) return networkResponse;
+
+      // Last resort for navigation — serve cached home page
+      if (request.mode === 'navigate') {
+        const homeCached = await cache.match('/');
+        if (homeCached) return homeCached;
+      }
+
+      return new Response('Offline', { status: 503 });
+    })
   );
 });

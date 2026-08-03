@@ -16,14 +16,13 @@ import type { Payment } from '@/lib/db';
 import {
   formatCurrency,
   formatDate,
-  getInitials,
-  getAvatarColor,
   getStatusLabel,
 } from '@/lib/utils';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import AddPaymentModal from '@/components/AddPaymentModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
+import UserAvatar from '@/components/UserAvatar';
 import { useToast } from '@/components/Toast';
 
 export default function PersonDetailPage({
@@ -93,12 +92,7 @@ export default function PersonDetailPage({
 
       {/* Hero Card */}
       <Card className="animate-in mb-5 border border-white/5 bg-slate-800/40 p-5 text-center">
-        <div
-          className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-lg font-bold text-white"
-          style={{ background: getAvatarColor(person.name) }}
-        >
-          {getInitials(person.name)}
-        </div>
+          <UserAvatar name={person.name} size={64} className="mx-auto mb-3" />
         <h2 className="text-lg font-bold">{person.name}</h2>
         <p className="mt-0.5 text-xs text-slate-400">Net Balance</p>
         <p className="text-2xl font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#94a3b8' }}>

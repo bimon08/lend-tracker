@@ -229,12 +229,12 @@ export default function SettingsPage() {
           <SettingsItem
             icon={Cloud}
             title="Storage"
-            subtitle="Cloud synced (Supabase) — access from any device"
+            subtitle="Offline-first (local) · Syncs to cloud when online"
           />
           <SettingsItem
             icon={Info}
             title="LendTracker"
-            subtitle="v2.0.0 · Cloud Edition · by Pixel Thread"
+            subtitle="v3.0.0 · Offline-First Edition · by Pixel Thread"
           />
         </Card>
       </div>
