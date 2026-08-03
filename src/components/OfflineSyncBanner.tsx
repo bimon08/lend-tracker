@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CloudOff, Loader2, Check, Cloud } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Loader2, Check, Cloud } from 'lucide-react';
 import { onSyncStatusChange, getSyncStatus, getPendingSyncCount, fullSync } from '@/lib/syncEngine';
 
 export default function OfflineSyncBanner() {
+  const pathname = usePathname();
   const [status, setStatus] = useState(getSyncStatus());
   const [pending, setPending] = useState(getPendingSyncCount());
   const [online, setOnline] = useState(true);
   const [justSynced, setJustSynced] = useState(false);
+
+  // Don't show on login page
+  if (pathname === '/login') return null;
 
   useEffect(() => {
     setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);

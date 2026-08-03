@@ -243,6 +243,11 @@ export async function fullSync(): Promise<void> {
       await pullFromSupabase();
       lastSyncTime = Date.now();
       await updatePendingCount();
+      // Notify hooks to re-render with fresh data from pull
+      try {
+        const { notifyDataChange } = await import('./hooks');
+        notifyDataChange();
+      } catch { /* hooks not loaded yet */ }
       setSyncStatus('idle');
     } catch (e) {
       console.error('Sync failed:', e);
