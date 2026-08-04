@@ -110,11 +110,13 @@ export function useSummary() {
 
     let totalLent = 0, totalBorrowed = 0,
       totalLentOutstanding = 0, totalBorrowedOutstanding = 0,
-      activeLendCount = 0, activeBorrowCount = 0;
+      activeLendCount = 0, activeBorrowCount = 0, totalProfit = 0;
 
     for (const txn of activeTxns) {
       const paid = paymentsByTxn.get(txn.id) || 0;
       const outstanding = Math.max(0, txn.amount - paid);
+      const profit = Math.max(0, paid - txn.amount);
+      totalProfit += profit;
 
       if (txn.type === 'lend') {
         totalLent += txn.amount;
@@ -131,7 +133,7 @@ export function useSummary() {
       totalLent, totalBorrowed,
       totalLentOutstanding, totalBorrowedOutstanding,
       netBalance: totalLentOutstanding - totalBorrowedOutstanding,
-      activeLendCount, activeBorrowCount,
+      activeLendCount, activeBorrowCount, totalProfit,
     };
   });
 }

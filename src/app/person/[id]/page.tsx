@@ -9,6 +9,7 @@ import {
   ArrowDownLeft,
   Plus,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import { usePerson, usePersonSummary, useTransactions } from '@/lib/hooks';
 import { dataLayer } from '@/lib/db';
@@ -119,6 +120,15 @@ export default function PersonDetailPage({
             <p className="text-base font-bold text-amber-400">{formatCurrency(summary?.borrowedOutstanding || 0)}</p>
             <p className="text-[0.7rem] text-slate-400">Borrowed Outstanding</p>
           </div>
+          {summary && summary.totalProfit > 0 && (
+            <div className="col-span-2 flex items-center justify-between rounded-xl bg-blue-500/8 p-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={16} className="text-blue-400" />
+                <p className="text-[0.7rem] font-medium text-slate-400">Total Profit Earned</p>
+              </div>
+              <p className="text-base font-bold text-blue-400">+{formatCurrency(summary.totalProfit)}</p>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -150,6 +160,7 @@ export default function PersonDetailPage({
             const payments = txnPayments.get(txn.id) || [];
             const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
             const outstanding = Math.max(0, txn.amount - totalPaid);
+            const profit = Math.max(0, totalPaid - txn.amount);
             const progress = txn.amount > 0 ? Math.min(100, (totalPaid / txn.amount) * 100) : 100;
 
             return (
@@ -169,6 +180,11 @@ export default function PersonDetailPage({
                     }`}>
                       {getStatusLabel(txn.status)}
                     </span>
+                    {profit > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-blue-500/12 px-2 py-0.5 text-[0.65rem] font-semibold text-blue-400">
+                        <TrendingUp size={9} /> +{formatCurrency(profit)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
@@ -195,10 +211,14 @@ export default function PersonDetailPage({
                   {txn.dueDate && <> · Due: {formatDate(txn.dueDate)}</>}
                 </p>
 
-                {txn.status !== 'settled' && (
+                {(txn.status !== 'settled' || profit > 0) && (
                   <div className="mb-1 flex justify-between text-xs text-slate-500">
                     <span>Paid: {formatCurrency(totalPaid)}</span>
-                    <span>Left: {formatCurrency(outstanding)}</span>
+                    {outstanding > 0 ? (
+                      <span>Left: {formatCurrency(outstanding)}</span>
+                    ) : profit > 0 ? (
+                      <span className="font-semibold text-blue-400">Profit: +{formatCurrency(profit)}</span>
+                    ) : null}
                   </div>
                 )}
                 <div className="h-1 overflow-hidden rounded-full bg-slate-700/50">
@@ -224,17 +244,15 @@ export default function PersonDetailPage({
                   </div>
                 )}
 
-                {txn.status !== 'settled' && (
-                  <Button
-                    className={`mt-3 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold text-white ${
-                      txn.type === 'lend' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' : 'bg-gradient-to-r from-amber-600 to-amber-500'
-                    }`}
-                    onPress={() => setPaymentTarget({ txnId: txn.id, type: txn.type, outstanding })}
-                    id={`record-payment-${txn.id}`}
-                  >
-                    <Plus size={14} /> Record Payment
-                  </Button>
-                )}
+                <Button
+                  className={`mt-3 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold text-white ${
+                    txn.type === 'lend' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' : 'bg-gradient-to-r from-amber-600 to-amber-500'
+                  }`}
+                  onPress={() => setPaymentTarget({ txnId: txn.id, type: txn.type, outstanding })}
+                  id={`record-payment-${txn.id}`}
+                >
+                  <Plus size={14} /> Record Payment
+                </Button>
               </Card>
             );
           })}
@@ -263,6 +281,13 @@ export default function PersonDetailPage({
           transactionId={paymentTarget.txnId}
           transactionType={paymentTarget.type}
           outstanding={paymentTarget.outstanding}
+          onDeleteTransaction={async (txnId) => {
+            await dataLayer.deleteTransaction(txnId);
+            setPaymentTarget(null);
+            await refreshAll();
+            await loadPayments();
+            showToast('Transaction deleted', 'success');
+          }}
         />
       )}
 

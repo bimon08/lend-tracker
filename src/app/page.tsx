@@ -10,6 +10,7 @@ import {
   Plus,
   Clock,
   Users,
+  TrendingUp,
 } from 'lucide-react';
 import { useSummary, usePersonsWithSummaries } from '@/lib/hooks';
 import { dataLayer } from '@/lib/db';
@@ -165,6 +166,20 @@ export default function DashboardPage() {
             {summaryLoading ? '—' : `${(summary?.netBalance || 0) >= 0 ? '+' : ''}${formatCurrency(summary?.netBalance || 0)}`}
           </p>
         </div>
+
+        {summary && summary.totalProfit > 0 && (
+          <div className="flex items-center justify-between rounded-xl border border-white/5 bg-blue-500/8 px-3 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400">
+                <TrendingUp size={14} />
+              </div>
+              <p className="text-[0.65rem] font-medium text-slate-500">Total Profit</p>
+            </div>
+            <p className="text-base font-bold text-blue-400">
+              +{formatCurrency(summary.totalProfit)}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}

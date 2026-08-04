@@ -381,6 +381,7 @@ export const dataLayer = {
     lentOutstanding: number;
     borrowedOutstanding: number;
     netBalance: number;
+    totalProfit: number;
   }> {
     const txns = await this.getTransactions({ personId });
     const paymentPromises = txns.map((txn) => this.getPayments(txn.id));
@@ -393,11 +394,13 @@ export const dataLayer = {
     });
 
     let totalLent = 0, totalBorrowed = 0,
-      lentOutstanding = 0, borrowedOutstanding = 0;
+      lentOutstanding = 0, borrowedOutstanding = 0, totalProfit = 0;
 
     for (const txn of txns) {
       const paid = paymentsByTxn.get(txn.id) || 0;
       const outstanding = Math.max(0, txn.amount - paid);
+      const profit = Math.max(0, paid - txn.amount);
+      totalProfit += profit;
 
       if (txn.type === 'lend') {
         totalLent += txn.amount;
@@ -412,6 +415,7 @@ export const dataLayer = {
       totalLent, totalBorrowed,
       lentOutstanding, borrowedOutstanding,
       netBalance: lentOutstanding - borrowedOutstanding,
+      totalProfit,
     };
   },
 

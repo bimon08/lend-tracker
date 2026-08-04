@@ -210,6 +210,11 @@ export default function TransactionDetailPage({
         transactionId={id}
         transactionType={txn.type}
         outstanding={txn.outstanding}
+        onDeleteTransaction={async () => {
+          await dataLayer.deleteTransaction(id);
+          showToast('Transaction deleted', 'success');
+          router.back();
+        }}
       />
 
       <ConfirmDialog isOpen={showDeleteTxn} title="Delete Transaction" message="This will permanently delete this transaction and all its payments. This cannot be undone." confirmLabel="Delete" onConfirm={handleDeleteTransaction} onCancel={() => setShowDeleteTxn(false)} />
