@@ -75,19 +75,35 @@ export async function pullFromSupabase(): Promise<void> {
 
   const supabase = createClient();
 
+  // Collect IDs of locally-modified records so we don't overwrite them with server data.
+  // Records with 'pending' or 'deleted' status have unsynced local changes that must be preserved.
+  const localPendingPersonIds = new Set(
+    (await localDb.persons.where('_syncStatus').anyOf(['pending', 'deleted']).toArray()).map(p => p.id)
+  );
+  const localPendingTxnIds = new Set(
+    (await localDb.transactions.where('_syncStatus').anyOf(['pending', 'deleted']).toArray()).map(t => t.id)
+  );
+  const localPendingPaymentIds = new Set(
+    (await localDb.payments.where('_syncStatus').anyOf(['pending', 'deleted']).toArray()).map(p => p.id)
+  );
+
   // Fetch persons
   const { data: persons, error: e1 } = await supabase
     .from('persons')
     .select('*');
   if (!e1 && persons) {
-    await localDb.persons.bulkPut(
-      persons.map(p => ({
-        ...p,
-        _syncStatus: 'synced' as const,
-        _lastModified: Date.now(),
-      }))
-    );
-    // Remove local records that no longer exist on server (deleted from other device)
+    // Only put records that don't have local pending changes
+    const safeToPut = persons.filter(p => !localPendingPersonIds.has(p.id));
+    if (safeToPut.length > 0) {
+      await localDb.persons.bulkPut(
+        safeToPut.map(p => ({
+          ...p,
+          _syncStatus: 'synced' as const,
+          _lastModified: Date.now(),
+        }))
+      );
+    }
+    // Remove local synced records that no longer exist on server (deleted from other device)
     const serverIds = new Set(persons.map(p => p.id));
     const localPersons = await localDb.persons.where('_syncStatus').equals('synced').toArray();
     const toDelete = localPersons.filter(p => !serverIds.has(p.id)).map(p => p.id);
@@ -98,13 +114,16 @@ export async function pullFromSupabase(): Promise<void> {
     .from('transactions')
     .select('*');
   if (!e2 && transactions) {
-    await localDb.transactions.bulkPut(
-      transactions.map(t => ({
-        ...t,
-        _syncStatus: 'synced' as const,
-        _lastModified: Date.now(),
-      }))
-    );
+    const safeToPut = transactions.filter(t => !localPendingTxnIds.has(t.id));
+    if (safeToPut.length > 0) {
+      await localDb.transactions.bulkPut(
+        safeToPut.map(t => ({
+          ...t,
+          _syncStatus: 'synced' as const,
+          _lastModified: Date.now(),
+        }))
+      );
+    }
     const serverIds = new Set(transactions.map(t => t.id));
     const localTxns = await localDb.transactions.where('_syncStatus').equals('synced').toArray();
     const toDelete = localTxns.filter(t => !serverIds.has(t.id)).map(t => t.id);
@@ -116,13 +135,16 @@ export async function pullFromSupabase(): Promise<void> {
     .from('payments')
     .select('*');
   if (!e3 && payments) {
-    await localDb.payments.bulkPut(
-      payments.map(p => ({
-        ...p,
-        _syncStatus: 'synced' as const,
-        _lastModified: Date.now(),
-      }))
-    );
+    const safeToPut = payments.filter(p => !localPendingPaymentIds.has(p.id));
+    if (safeToPut.length > 0) {
+      await localDb.payments.bulkPut(
+        safeToPut.map(p => ({
+          ...p,
+          _syncStatus: 'synced' as const,
+          _lastModified: Date.now(),
+        }))
+      );
+    }
     const serverIds = new Set(payments.map(p => p.id));
     const localPayments = await localDb.payments.where('_syncStatus').equals('synced').toArray();
     const toDelete = localPayments.filter(p => !serverIds.has(p.id)).map(p => p.id);

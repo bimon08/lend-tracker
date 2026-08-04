@@ -14,7 +14,7 @@ interface AddPaymentModalProps {
   transactionId: string;
   transactionType: 'lend' | 'borrow';
   outstanding: number;
-  onDeleteTransaction?: (txnId: string) => void;
+  onDeleteTransaction?: (txnId: string) => void | Promise<void>;
 }
 
 export default function AddPaymentModal({
@@ -77,7 +77,7 @@ export default function AddPaymentModal({
     setDeleting(true);
     try {
       if (onDeleteTransaction) {
-        onDeleteTransaction(transactionId);
+        await onDeleteTransaction(transactionId);
       } else {
         await dataLayer.deleteTransaction(transactionId);
       }
