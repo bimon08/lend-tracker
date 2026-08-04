@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@heroui/react';
+import { Check } from 'lucide-react';
 import { dataLayer } from '@/lib/db';
 import { generateId, formatInputDate, parseAmountInput } from '@/lib/utils';
 import AmountInput from '@/components/AmountInput';
@@ -31,7 +32,9 @@ export default function AddTransactionModal({
   const [loading, setLoading] = useState(false);
   const [persons, setPersons] = useState<Person[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -41,16 +44,57 @@ export default function AddTransactionModal({
       setDate(formatInputDate(new Date()));
       setDueDate('');
       setNote('');
+      setHighlightedIndex(0);
       dataLayer.getPersons().then(setPersons);
     }
   }, [isOpen, defaultType, defaultPersonName]);
 
-  const filteredPersons = persons.filter(
-    (p) =>
-      personName.length > 0 &&
-      p.name.toLowerCase().includes(personName.toLowerCase()) &&
-      p.name.toLowerCase() !== personName.toLowerCase()
+  // Score matches: starts-with gets priority, then includes
+  const filteredPersons = personName.length > 0
+    ? persons
+        .filter((p) => p.name.toLowerCase().includes(personName.toLowerCase()))
+        .sort((a, b) => {
+          const aStarts = a.name.toLowerCase().startsWith(personName.toLowerCase()) ? 0 : 1;
+          const bStarts = b.name.toLowerCase().startsWith(personName.toLowerCase()) ? 0 : 1;
+          if (aStarts !== bStarts) return aStarts - bStarts;
+          return a.name.localeCompare(b.name);
+        })
+    : [];
+
+  // Check if the current input exactly matches an existing person
+  const exactMatch = persons.find(
+    (p) => p.name.toLowerCase() === personName.trim().toLowerCase()
   );
+
+  // Reset highlighted index when filtered list changes
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [personName]);
+
+  const selectPerson = (name: string) => {
+    setPersonName(name);
+    setShowSuggestions(false);
+    // Move focus to amount input
+    setTimeout(() => {
+      const amountInput = document.getElementById('input-amount');
+      if (amountInput) amountInput.focus();
+    }, 50);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || filteredPersons.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => Math.min(prev + 1, filteredPersons.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && showSuggestions && filteredPersons.length > 0) {
+      e.preventDefault();
+      selectPerson(filteredPersons[highlightedIndex].name);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,32 +175,53 @@ export default function AddTransactionModal({
             </button>
           </div>
 
-          {/* Person Name */}
+          {/* Person Name with Autocomplete */}
           <div className="relative">
             <label className="mb-1.5 block text-xs font-medium text-slate-400">
               {type === 'lend' ? 'Lending To' : 'Borrowing From'}
             </label>
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Enter person's name"
-              value={personName}
-              onChange={(e) => { setPersonName(e.target.value); setShowSuggestions(true); }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              required
-              className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus:border-violet-500/50"
-              id="input-person-name"
-            />
-            {showSuggestions && filteredPersons.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-white/10 bg-slate-800">
-                {filteredPersons.map((p) => (
+            <div className="relative">
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Enter person's name"
+                value={personName}
+                onChange={(e) => { setPersonName(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => { if (personName.length > 0) setShowSuggestions(true); }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onKeyDown={handleKeyDown}
+                required
+                className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 pr-10 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus:border-violet-500/50"
+                id="input-person-name"
+              />
+              {exactMatch && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20">
+                    <Check size={12} className="text-emerald-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+            {showSuggestions && filteredPersons.length > 0 && !(filteredPersons.length === 1 && filteredPersons[0].name.toLowerCase() === personName.toLowerCase()) && (
+              <div
+                ref={suggestionsRef}
+                className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-slate-800 shadow-xl"
+              >
+                {filteredPersons.map((p, index) => (
                   <div
                     key={p.id}
-                    className="cursor-pointer px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700"
-                    onClick={() => { setPersonName(p.name); setShowSuggestions(false); }}
+                    className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                      index === highlightedIndex
+                        ? 'bg-violet-500/15 text-violet-300'
+                        : 'text-slate-300 hover:bg-slate-700'
+                    }`}
+                    onClick={() => selectPerson(p.name)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
                   >
-                    {p.name}
+                    <span>{p.name}</span>
+                    {index === highlightedIndex && (
+                      <Check size={14} className="shrink-0 text-violet-400" />
+                    )}
                   </div>
                 ))}
               </div>

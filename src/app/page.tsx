@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@heroui/react';
 import {
@@ -9,13 +9,12 @@ import {
   Scale,
   Plus,
   Clock,
+  Users,
 } from 'lucide-react';
-import { useSummary, useRecentTransactions } from '@/lib/hooks';
+import { useSummary, usePersonsWithSummaries } from '@/lib/hooks';
 import { dataLayer } from '@/lib/db';
 import {
   formatCurrency,
-  formatRelativeDate,
-  getStatusLabel,
 } from '@/lib/utils';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import EmptyState from '@/components/EmptyState';
@@ -26,12 +25,11 @@ import PendingChangesModal from '@/components/PendingChangesModal';
 export default function DashboardPage() {
   const router = useRouter();
   const { data: summary, loading: summaryLoading, refetch: refetchSummary } = useSummary();
-  const { data: recentTxns, loading: recentLoading, refetch: refetchRecent } = useRecentTransactions(8);
+  const { data: persons, loading: personsLoading, refetch: refetchPersons } = usePersonsWithSummaries();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [defaultType, setDefaultType] = useState<'lend' | 'borrow'>('lend');
-  const [personNames, setPersonNames] = useState<Map<string, string>>(new Map());
-  const [txnOutstanding, setTxnOutstanding] = useState<Map<string, number>>(new Map());
+
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [hasPending, setHasPending] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -49,29 +47,11 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const loadPersonNames = useCallback(async () => {
-    if (!recentTxns || recentTxns.length === 0) return;
-    const names = new Map<string, string>();
-    const outstanding = new Map<string, number>();
-    for (const txn of recentTxns) {
-      if (!names.has(txn.personId)) {
-        const person = await dataLayer.getPerson(txn.personId);
-        if (person) names.set(person.id, person.name);
-      }
-      const payments = await dataLayer.getPayments(txn.id);
-      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-      outstanding.set(txn.id, Math.max(0, txn.amount - totalPaid));
-    }
-    setPersonNames(names);
-    setTxnOutstanding(outstanding);
-  }, [recentTxns]);
 
-  useEffect(() => { loadPersonNames(); }, [loadPersonNames]);
 
   const refreshAll = async () => {
     await refetchSummary();
-    await refetchRecent();
-    await loadPersonNames();
+    await refetchPersons();
     showToast('Transaction added!', 'success');
   };
 
@@ -82,7 +62,7 @@ export default function DashboardPage() {
 
   // Check for pending changes on load
   useEffect(() => {
-    dataLayer.getPendingChangeCount().then((count) => {
+    dataLayer.getPendingChangeCount().then((count: number) => {
       if (count > 0) {
         setHasPending(true);
         setShowPendingModal(true);
@@ -201,76 +181,78 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Recent Activity */}
+      {/* People with outstanding balances */}
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Recent Activity
+        Who Owes Who
       </h2>
 
-      {recentLoading ? (
+      {personsLoading ? (
         <div className="flex flex-col gap-2.5">
           {[1, 2, 3].map((i) => <div key={i} className="skeleton skeleton-card" />)}
         </div>
-      ) : !recentTxns || recentTxns.length === 0 ? (
-        <EmptyState
-          icon={<Clock size={28} />}
-          title="No transactions yet"
-          description="Start by lending or borrowing money to see your activity here"
-        />
-      ) : (
-        <div className="flex flex-col gap-2.5">
-          {[...recentTxns]
-            .filter((txn) => {
-              const outstanding = txnOutstanding.get(txn.id) ?? txn.amount;
-              return outstanding > 0;
-            })
-            .sort((a, b) => {
-              const aOut = txnOutstanding.get(a.id) ?? a.amount;
-              const bOut = txnOutstanding.get(b.id) ?? b.amount;
-              return bOut - aOut;
-            })
-            .map((txn) => {
-            const name = personNames.get(txn.personId) || '...';
-            const outstanding = txnOutstanding.get(txn.id) ?? txn.amount;
-            return (
-              <div
-                key={txn.id}
-                className="animate-in flex cursor-pointer items-center gap-3 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-colors hover:bg-slate-800/60 active:scale-[0.98]"
-                onClick={() => router.push(`/transaction/${txn.id}`)}
-                id={`txn-${txn.id}`}
-              >
-                <UserAvatar name={name} size={42} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{name}</p>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <span className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ${
-                      txn.type === 'lend' ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500'
-                    }`}>
-                      {txn.type === 'lend' ? <ArrowUpRight size={10} /> : <ArrowDownLeft size={10} />}
-                      {txn.type === 'lend' ? 'Lent' : 'Borrowed'}
-                    </span>
-                    <span className="text-xs text-slate-500">{formatRelativeDate(txn.createdAt)}</span>
+      ) : (() => {
+        const activePersons = (persons || []).filter(
+          (p) => p.lentOutstanding > 0 || p.borrowedOutstanding > 0
+        ).sort((a, b) => {
+          const aAbs = Math.abs(a.lentOutstanding - a.borrowedOutstanding);
+          const bAbs = Math.abs(b.lentOutstanding - b.borrowedOutstanding);
+          return bAbs - aAbs;
+        });
+
+        if (activePersons.length === 0) {
+          return (
+            <EmptyState
+              icon={<Users size={28} />}
+              title="All settled up!"
+              description="No outstanding balances — start by lending or borrowing money"
+            />
+          );
+        }
+
+        return (
+          <div className="flex flex-col gap-2.5">
+            {activePersons.map((person) => {
+              const net = person.lentOutstanding - person.borrowedOutstanding;
+              return (
+                <div
+                  key={person.id}
+                  className="animate-in flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-colors hover:bg-slate-800/60 active:scale-[0.98]"
+                  onClick={() => router.push(`/person/${person.id}`)}
+                  id={`person-${person.id}`}
+                >
+                  <UserAvatar name={person.name} size={42} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{person.name}</p>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs">
+                      {person.lentOutstanding > 0 && (
+                        <span className="flex items-center gap-0.5 text-emerald-500">
+                          <ArrowUpRight size={10} /> {formatCurrency(person.lentOutstanding)}
+                        </span>
+                      )}
+                      {person.lentOutstanding > 0 && person.borrowedOutstanding > 0 && (
+                        <span className="h-1 w-1 rounded-full bg-slate-600" />
+                      )}
+                      {person.borrowedOutstanding > 0 && (
+                        <span className="flex items-center gap-0.5 text-amber-500">
+                          <ArrowDownLeft size={10} /> {formatCurrency(person.borrowedOutstanding)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-base font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#64748b' }}>
+                      {net >= 0 ? '+' : ''}{formatCurrency(net)}
+                    </p>
+                    <p className="text-[0.7rem] text-slate-500">
+                      {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
+                    </p>
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold" style={{ color: txn.type === 'lend' ? '#34d399' : '#fbbf24' }}>
-                    {formatCurrency(outstanding)}
-                  </p>
-                  {outstanding < txn.amount && (
-                    <p className="text-[0.7rem] text-slate-500">of {formatCurrency(txn.amount)}</p>
-                  )}
-                  <span className={`mt-0.5 inline-block rounded-full px-1.5 py-px text-[0.6rem] font-semibold ${
-                    txn.status === 'settled' ? 'bg-emerald-500/12 text-emerald-500'
-                    : txn.status === 'partial' ? 'bg-amber-500/12 text-amber-500'
-                    : 'bg-red-500/12 text-red-500'
-                  }`}>
-                    {getStatusLabel(txn.status)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       <AddTransactionModal
         isOpen={showAddModal}

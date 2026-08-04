@@ -45,6 +45,7 @@ export default function PersonDetailPage({
     outstanding: number;
   } | null>(null);
   const [showDeletePerson, setShowDeletePerson] = useState(false);
+  const [deleteTxnId, setDeleteTxnId] = useState<string | null>(null);
   const [txnPayments, setTxnPayments] = useState<Map<string, Payment[]>>(new Map());
   const { showToast, ToastElement } = useToast();
 
@@ -70,6 +71,15 @@ export default function PersonDetailPage({
     await dataLayer.deletePerson(id);
     showToast('Person deleted');
     router.push('/people');
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!deleteTxnId) return;
+    await dataLayer.deleteTransaction(deleteTxnId);
+    setDeleteTxnId(null);
+    await refreshAll();
+    await loadPayments();
+    showToast('Transaction deleted', 'success');
   };
 
   if (personLoading) {
@@ -160,9 +170,23 @@ export default function PersonDetailPage({
                       {getStatusLabel(txn.status)}
                     </span>
                   </div>
-                  <span className="text-lg font-bold" style={{ color: txn.type === 'lend' ? '#34d399' : '#fbbf24' }}>
-                    {formatCurrency(txn.amount)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <span className="text-lg font-bold" style={{ color: txn.type === 'lend' ? '#34d399' : '#fbbf24' }}>
+                        {formatCurrency(outstanding)}
+                      </span>
+                      {outstanding < txn.amount && (
+                        <p className="text-[0.65rem] text-slate-500">of {formatCurrency(txn.amount)}</p>
+                      )}
+                    </div>
+                    <button
+                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition-colors hover:bg-red-500/20"
+                      onClick={() => setDeleteTxnId(txn.id)}
+                      id={`delete-txn-${txn.id}`}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
 
                 <p className="mb-2 text-xs text-slate-500">
@@ -249,6 +273,15 @@ export default function PersonDetailPage({
         confirmLabel="Delete"
         onConfirm={handleDeletePerson}
         onCancel={() => setShowDeletePerson(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteTxnId}
+        title="Delete Transaction"
+        message="This will permanently delete this transaction and all its payments."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteTransaction}
+        onCancel={() => setDeleteTxnId(null)}
       />
     </div>
   );
