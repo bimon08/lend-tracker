@@ -32,6 +32,7 @@ export default function AddPaymentModal({
   const [loading, setLoading] = useState(false);
   const [settledView, setSettledView] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [autoSettle, setAutoSettle] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,6 +41,7 @@ export default function AddPaymentModal({
       setNote('');
       setSettledView(false);
       setDeleting(false);
+      setAutoSettle(false);
     }
   }, [isOpen]);
 
@@ -156,25 +158,57 @@ export default function AddPaymentModal({
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">Payment Amount</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
-                  <AmountInput
-                    value={amount}
-                    onChange={setAmount}
-                    placeholder="0"
-                    required
-                    className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
-                  />
+                <div className="flex items-center gap-2.5">
+                  <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
+                    <AmountInput
+                      value={amount}
+                      onChange={(val) => { if (!autoSettle) setAmount(val); }}
+                      placeholder="0"
+                      required
+                      className={`w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50 ${autoSettle ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      disabled={autoSettle}
+                    />
+                  </div>
+                  {outstanding > 0 && (
+                    <label
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all select-none ${
+                        autoSettle
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-800/60 text-slate-400 border border-white/10 hover:border-white/20'
+                      }`}
+                      id="auto-settle-label"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={autoSettle}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setAutoSettle(checked);
+                          if (checked) {
+                            setAmount(String(outstanding));
+                          } else {
+                            setAmount('');
+                          }
+                        }}
+                        className="sr-only"
+                        id="auto-settle-checkbox"
+                      />
+                      <span className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${
+                        autoSettle
+                          ? 'border-emerald-500 bg-emerald-500'
+                          : 'border-slate-500 bg-transparent'
+                      }`}>
+                        {autoSettle && (
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </span>
+                      Settle
+                    </label>
+                  )}
                 </div>
-                {outstanding > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setAmount(String(outstanding))}
-                    className="mt-2 text-xs font-semibold text-blue-400 hover:text-blue-300"
-                  >
-                    Pay Full Amount ({formatCurrency(outstanding)})
-                  </button>
-                )}
               </div>
 
               <div>

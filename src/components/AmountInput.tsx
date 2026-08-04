@@ -9,6 +9,7 @@ interface AmountInputProps {
   className?: string;
   id?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
 // Format number string with Indian commas: 1,00,000
@@ -33,6 +34,7 @@ export default function AmountInput({
   className = '',
   id,
   required,
+  disabled,
 }: AmountInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -148,6 +150,7 @@ export default function AmountInput({
       className={className}
       id={id}
       required={required}
+      disabled={disabled}
       autoComplete="off"
     />
   );
