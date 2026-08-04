@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { Loader2, Check, Cloud } from 'lucide-react';
+import { Loader2, Check, Cloud, CloudOff } from 'lucide-react';
 import { onSyncStatusChange, getSyncStatus, getPendingSyncCount, fullSync } from '@/lib/syncEngine';
 
 export default function OfflineSyncBanner() {
