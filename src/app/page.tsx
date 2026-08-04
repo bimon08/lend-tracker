@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button } from '@heroui/react';
+import { Button } from '@heroui/react';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -117,50 +117,54 @@ export default function DashboardPage() {
 
 
       {/* Summary Cards */}
-      <div className="animate-in mb-6 grid grid-cols-2 gap-3">
-        <Card className="border border-white/5 bg-emerald-500/10 p-4">
-          <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
-            <ArrowUpRight size={18} />
+      <div className="animate-in mb-5 flex flex-col gap-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-emerald-500/8 px-3 py-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
+              <ArrowUpRight size={14} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.65rem] font-medium text-slate-500">Lent Out</p>
+              <p className="text-base font-bold leading-tight text-emerald-400">
+                {summaryLoading ? '—' : formatCurrency(summary?.totalLentOutstanding || 0)}
+              </p>
+            </div>
           </div>
-          <p className="text-xs font-medium text-slate-400">Lent Out</p>
-          <p className="mt-1 text-xl font-bold text-emerald-400">
-            {summaryLoading ? '—' : formatCurrency(summary?.totalLentOutstanding || 0)}
-          </p>
-          {summary && summary.activeLendCount > 0 && (
-            <p className="mt-1 text-xs text-slate-500">{summary.activeLendCount} active</p>
-          )}
-        </Card>
 
-        <Card className="border border-white/5 bg-amber-500/10 p-4">
-          <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
-            <ArrowDownLeft size={18} />
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-amber-500/8 px-3 py-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
+              <ArrowDownLeft size={14} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.65rem] font-medium text-slate-500">Borrowed</p>
+              <p className="text-base font-bold leading-tight text-amber-400">
+                {summaryLoading ? '—' : formatCurrency(summary?.totalBorrowedOutstanding || 0)}
+              </p>
+            </div>
           </div>
-          <p className="text-xs font-medium text-slate-400">Borrowed</p>
-          <p className="mt-1 text-xl font-bold text-amber-400">
-            {summaryLoading ? '—' : formatCurrency(summary?.totalBorrowedOutstanding || 0)}
-          </p>
-          {summary && summary.activeBorrowCount > 0 && (
-            <p className="mt-1 text-xs text-slate-500">{summary.activeBorrowCount} active</p>
-          )}
-        </Card>
+        </div>
 
-        <Card className="col-span-2 border border-white/5 bg-slate-800/40 p-4">
-          <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-500">
-            <Scale size={18} />
+        <div className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-800/40 px-3 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-500">
+              <Scale size={14} />
+            </div>
+            <div>
+              <p className="text-[0.65rem] font-medium text-slate-500">Net Balance</p>
+              <p className="text-[0.65rem] text-slate-500">
+                {(summary?.netBalance || 0) > 0 ? 'Others owe you more' : (summary?.netBalance || 0) < 0 ? 'You owe others more' : 'All settled'}
+              </p>
+            </div>
           </div>
-          <p className="text-xs font-medium text-slate-400">Net Balance</p>
           <p
-            className="mt-1 text-xl font-bold"
+            className="text-lg font-bold"
             style={{
               color: (summary?.netBalance || 0) > 0 ? '#34d399' : (summary?.netBalance || 0) < 0 ? '#fbbf24' : '#94a3b8',
             }}
           >
             {summaryLoading ? '—' : `${(summary?.netBalance || 0) >= 0 ? '+' : ''}${formatCurrency(summary?.netBalance || 0)}`}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {(summary?.netBalance || 0) > 0 ? 'Others owe you more' : (summary?.netBalance || 0) < 0 ? 'You owe others more' : 'All settled'}
-          </p>
-        </Card>
+        </div>
       </div>
 
       {/* Quick Actions */}
