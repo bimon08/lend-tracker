@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Loader2, Check, Cloud, CloudOff } from 'lucide-react';
-import { onSyncStatusChange, getSyncStatus, getPendingSyncCount, fullSync } from '@/lib/syncEngine';
+import { onSyncStatusChange, getSyncStatus, getPendingSyncCount, fullSync, getLastSyncHadChanges } from '@/lib/syncEngine';
 
 export default function OfflineSyncBanner() {
   const pathname = usePathname();
@@ -18,11 +18,12 @@ export default function OfflineSyncBanner() {
   useEffect(() => {
     setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-    const unsubscribe = onSyncStatusChange((newStatus, newPending) => {
+    const unsubscribe = onSyncStatusChange((newStatus, newPending, hadChanges) => {
       setStatus(newStatus);
       setPending(newPending);
 
-      if (newStatus === 'idle' && newPending === 0) {
+      // Only show "All synced" when there were actual changes
+      if (newStatus === 'idle' && newPending === 0 && hadChanges) {
         setJustSynced(true);
         setTimeout(() => setJustSynced(false), 2000);
       }

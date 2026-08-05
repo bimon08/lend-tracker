@@ -10,20 +10,22 @@ type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
 let syncStatus: SyncStatus = 'idle';
 let lastSyncTime: number = 0;
 let pendingCount: number = 0;
-const listeners = new Set<(status: SyncStatus, pending: number) => void>();
+let lastSyncHadChanges: boolean = false;
+const listeners = new Set<(status: SyncStatus, pending: number, hadChanges: boolean) => void>();
 
 export function getSyncStatus() { return syncStatus; }
 export function getLastSyncTime() { return lastSyncTime; }
 export function getPendingSyncCount() { return pendingCount; }
+export function getLastSyncHadChanges() { return lastSyncHadChanges; }
 
-export function onSyncStatusChange(cb: (status: SyncStatus, pending: number) => void) {
+export function onSyncStatusChange(cb: (status: SyncStatus, pending: number, hadChanges: boolean) => void) {
   listeners.add(cb);
   return () => { listeners.delete(cb); };
 }
 
 function setSyncStatus(status: SyncStatus) {
   syncStatus = status;
-  listeners.forEach(cb => cb(status, pendingCount));
+  listeners.forEach(cb => cb(status, pendingCount, lastSyncHadChanges));
 }
 
 async function updatePendingCount() {
@@ -31,7 +33,7 @@ async function updatePendingCount() {
   const t = await localDb.transactions.where('_syncStatus').anyOf(['pending', 'deleted']).count();
   const pm = await localDb.payments.where('_syncStatus').anyOf(['pending', 'deleted']).count();
   pendingCount = p + t + pm;
-  listeners.forEach(cb => cb(syncStatus, pendingCount));
+  listeners.forEach(cb => cb(syncStatus, pendingCount, lastSyncHadChanges));
 }
 
 function isOnline(): boolean {
@@ -259,12 +261,19 @@ export async function fullSync(): Promise<void> {
   }
 
   syncPromise = (async () => {
-    setSyncStatus('syncing');
+    // Only show 'syncing' status if there are pending changes to push
+    const hadPendingBefore = pendingCount > 0;
+    if (hadPendingBefore) {
+      setSyncStatus('syncing');
+    }
     try {
-      await pushToSupabase();
+      const pushResult = await pushToSupabase();
       await pullFromSupabase();
       lastSyncTime = Date.now();
+      const prevPending = pendingCount;
       await updatePendingCount();
+      // Track whether this sync actually did something meaningful
+      lastSyncHadChanges = pushResult.pushed > 0 || (hadPendingBefore && prevPending !== pendingCount);
       // Notify hooks to re-render with fresh data from pull
       try {
         const { notifyDataChange } = await import('./hooks');
