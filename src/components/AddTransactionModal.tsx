@@ -142,22 +142,22 @@ export default function AddTransactionModal({
       onClick={onClose}
     >
       <div
-        className="animate-in w-full max-w-lg rounded-t-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:mx-4 sm:rounded-2xl"
+        className="animate-in glass-card w-full max-w-lg rounded-t-2xl p-6 shadow-2xl sm:mx-4 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-5 text-lg font-bold text-slate-100">
+        <h3 className="mb-5 text-lg font-bold text-white">
           {type === 'lend' ? 'Lend Money' : 'Borrow Money'}
         </h3>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Type Toggle */}
-          <div className="flex gap-2 rounded-xl bg-slate-800/60 p-1">
+          <div className="flex gap-2 rounded-xl bg-white/5 p-1">
             <button
               type="button"
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
                 type === 'lend'
-                  ? 'bg-emerald-500/20 text-emerald-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-300'
+                  ? 'bg-white/10 text-emerald-400'
+                  : 'text-white/40'
               }`}
               onClick={() => setType('lend')}
             >
@@ -167,8 +167,8 @@ export default function AddTransactionModal({
               type="button"
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
                 type === 'borrow'
-                  ? 'bg-amber-500/20 text-amber-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-300'
+                  ? 'bg-white/10 text-amber-400'
+                  : 'text-white/40'
               }`}
               onClick={() => setType('borrow')}
             >
@@ -178,7 +178,7 @@ export default function AddTransactionModal({
 
           {/* Person Name with Autocomplete */}
           <div className="relative">
-            <label className="mb-1.5 block text-xs font-medium text-slate-400">
+            <label className="mb-1.5 block text-xs font-medium text-white/40">
               {type === 'lend' ? 'Lending To' : 'Borrowing From'}
             </label>
             <div className="relative">
@@ -192,7 +192,7 @@ export default function AddTransactionModal({
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 onKeyDown={handleKeyDown}
                 required
-                className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 pr-10 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus:border-violet-500/50"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/25"
                 id="input-person-name"
               />
               {exactMatch && (
@@ -206,22 +206,27 @@ export default function AddTransactionModal({
             {showSuggestions && filteredPersons.length > 0 && !(filteredPersons.length === 1 && filteredPersons[0].name.toLowerCase() === personName.toLowerCase()) && (
               <div
                 ref={suggestionsRef}
-                className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-slate-800 shadow-xl"
+                className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 shadow-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(30px) saturate(1.6)',
+                  WebkitBackdropFilter: 'blur(30px) saturate(1.6)',
+                }}
               >
                 {filteredPersons.map((p, index) => (
                   <div
                     key={p.id}
                     className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm transition-colors ${
                       index === highlightedIndex
-                        ? 'bg-violet-500/15 text-violet-300'
-                        : 'text-slate-300 hover:bg-slate-700'
+                        ? 'bg-white/10 text-white'
+                        : 'text-white/70'
                     }`}
                     onClick={() => selectPerson(p.name)}
                     onMouseEnter={() => setHighlightedIndex(index)}
                   >
                     <span>{p.name}</span>
                     {index === highlightedIndex && (
-                      <Check size={14} className="shrink-0 text-violet-400" />
+                      <Check size={14} className="shrink-0 text-white/50" />
                     )}
                   </div>
                 ))}
@@ -231,15 +236,15 @@ export default function AddTransactionModal({
 
           {/* Amount */}
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-slate-400">Amount</label>
+            <label className="mb-1.5 block text-xs font-medium text-white/40">Amount</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/40">₹</span>
               <AmountInput
                 value={amount}
                 onChange={setAmount}
                 placeholder="0"
                 required
-                className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
+                className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-8 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/25"
                 id="input-amount"
               />
             </div>
@@ -263,24 +268,24 @@ export default function AddTransactionModal({
 
           {/* Note */}
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-slate-400">Note (optional)</label>
+            <label className="mb-1.5 block text-xs font-medium text-white/40">Note (optional)</label>
             <input
               type="text"
               placeholder="What's it for?"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/25"
             />
           </div>
 
           {/* Submit */}
-          <Button
+          <button
             type="submit"
-            isDisabled={loading}
-            className={`w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] ${
+            disabled={loading}
+            className={`w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] ${
               type === 'lend'
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500'
-                : 'bg-gradient-to-r from-amber-600 to-amber-500'
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-amber-500/20 text-amber-400'
             }`}
             id="submit-transaction"
           >
@@ -292,9 +297,10 @@ export default function AddTransactionModal({
             ) : (
               type === 'lend' ? 'Record Lending' : 'Record Borrowing'
             )}
-          </Button>
+          </button>
         </form>
       </div>
     </div>
   );
 }
+

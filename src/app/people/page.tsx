@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Search, ArrowUpRight, ArrowDownLeft, Plus } from 'lucide-react';
 import { usePersonsWithSummaries } from '@/lib/hooks';
 import { formatCurrency } from '@/lib/utils';
@@ -18,6 +19,15 @@ const TABS: { key: TabFilter; label: string }[] = [
   { key: 'borrowed', label: 'Borrowed' },
 ];
 
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.04 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1 },
+};
+
 export default function PeoplePage() {
   const router = useRouter();
   const { data: persons, loading, refetch } = usePersonsWithSummaries();
@@ -27,11 +37,9 @@ export default function PeoplePage() {
   const { showToast, ToastElement } = useToast();
 
   const filtered = (persons || []).filter((p) => {
-    // Search filter
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    // Tab filter
     if (activeTab === 'lent') return p.lentOutstanding > 0;
     if (activeTab === 'borrowed') return p.borrowedOutstanding > 0;
     return true;
@@ -47,41 +55,42 @@ export default function PeoplePage() {
   return (
     <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
       <div className="mb-5 py-1">
-        <h1 className="text-2xl font-bold tracking-tight">People</h1>
-        <p className="mt-0.5 text-sm text-slate-400">Everyone you transact with</p>
+        <h1 className="text-2xl font-bold tracking-tight text-white">People</h1>
+        <p className="mt-0.5 text-sm text-white/50">Everyone you transact with</p>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-4 flex gap-1 rounded-xl bg-slate-800/60 p-1">
+      {/* Glass Tabs */}
+      <div className="glass-card mb-4 flex gap-1 rounded-xl p-1">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
-              activeTab === tab.key
-                ? tab.key === 'lent'
-                  ? 'bg-emerald-500/20 text-emerald-400 shadow-sm'
-                  : tab.key === 'borrowed'
-                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
-                    : 'bg-violet-500/20 text-violet-300 shadow-sm'
-                : 'text-slate-400 hover:text-slate-300'
+            className={`relative flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+              activeTab === tab.key ? 'text-white' : 'text-white/40'
             }`}
             id={`tab-${tab.key}`}
           >
-            {tab.label}
+            {activeTab === tab.key && (
+              <motion.div
+                layoutId="people-tab-active"
+                className="absolute inset-0 rounded-lg bg-white/15"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">{tab.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Search */}
+      {/* Glass Search */}
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
         <input
           type="text"
           placeholder="Search people..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-10 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
+          className="glass-card w-full rounded-xl py-2.5 pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30"
           id="search-people"
         />
       </div>
@@ -97,52 +106,53 @@ export default function PeoplePage() {
           description={getEmptyMessage().desc}
         />
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <motion.div className="flex flex-col gap-2.5" variants={stagger} initial="hidden" animate="show">
           {filtered.map((person) => {
             const net = person.lentOutstanding - person.borrowedOutstanding;
             return (
-              <div
+              <motion.div
                 key={person.id}
-                className="animate-in flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-colors hover:bg-slate-800/60 active:scale-[0.98]"
+                variants={fadeUp}
+                className="glass-card flex cursor-pointer items-center gap-3.5 rounded-2xl p-3.5 transition-all active:scale-[0.98]"
                 onClick={() => router.push(`/person/${person.id}`)}
                 id={`person-${person.id}`}
               >
                 <UserAvatar name={person.name} size={48} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{person.name}</p>
+                  <p className="text-sm font-semibold text-white">{person.name}</p>
                   <div className="mt-1 flex items-center gap-1.5 text-xs">
                     {person.lentOutstanding > 0 && (
-                      <span className="flex items-center gap-0.5 text-emerald-500">
+                      <span className="flex items-center gap-0.5 text-white/70">
                         <ArrowUpRight size={10} /> {formatCurrency(person.lentOutstanding)}
                       </span>
                     )}
                     {person.lentOutstanding > 0 && person.borrowedOutstanding > 0 && (
-                      <span className="h-1 w-1 rounded-full bg-slate-600" />
+                      <span className="h-1 w-1 rounded-full bg-white/20" />
                     )}
                     {person.borrowedOutstanding > 0 && (
-                      <span className="flex items-center gap-0.5 text-amber-500">
+                      <span className="flex items-center gap-0.5 text-white/70">
                         <ArrowDownLeft size={10} /> {formatCurrency(person.borrowedOutstanding)}
                       </span>
                     )}
                     {person.lentOutstanding === 0 && person.borrowedOutstanding === 0 && (
-                      <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-500">
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-400">
                         All Settled
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-base font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#64748b' }}>
+                  <p className="text-base font-bold text-white">
                     {net >= 0 ? '+' : ''}{formatCurrency(net)}
                   </p>
-                  <p className="text-[0.7rem] text-slate-500">
+                  <p className="text-[0.7rem] text-white/50">
                     {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       <AddPersonModal
@@ -151,9 +161,16 @@ export default function PeoplePage() {
         onSuccess={() => { refetch(); showToast('Person added!'); }}
       />
 
-      {/* FAB */}
+      {/* Floating Glass FAB */}
       <button
-        className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/30 transition-transform active:scale-90"
+        className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full transition-transform active:scale-90"
+        style={{
+          background: 'rgba(255, 255, 255, 0.12)',
+          backdropFilter: 'blur(30px) saturate(1.6)',
+          WebkitBackdropFilter: 'blur(30px) saturate(1.6)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: 'inset 0 0 2px 1px rgba(255,255,255,0.2), 0 8px 32px rgba(0,0,0,0.2)',
+        }}
         onClick={() => setShowAddPerson(true)}
         id="fab-people"
       >

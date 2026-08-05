@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -12,6 +13,8 @@ import {
   Users,
   TrendingUp,
   Loader2,
+  CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 import { useSummary, usePersonsWithSummaries } from '@/lib/hooks';
 import { dataLayer } from '@/lib/db';
@@ -32,6 +35,10 @@ export default function DashboardPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [defaultType, setDefaultType] = useState<'lend' | 'borrow'>('lend');
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
+  const [expandedTxns, setExpandedTxns] = useState<{ id: string; type: 'lend' | 'borrow'; amount: number; remaining: number; note?: string; date: Date }[]>([]);
+  const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState('');
 
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [hasPending, setHasPending] = useState(false);
@@ -50,8 +57,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-
-
   const refreshAll = async () => {
     await refetchSummary();
     await refetchPersons();
@@ -61,6 +66,91 @@ export default function DashboardPage() {
   const openAdd = (type: 'lend' | 'borrow') => {
     setDefaultType(type);
     setShowAddModal(true);
+  };
+
+  // Load outstanding transactions when expanding a person card
+  const toggleExpand = async (personId: string) => {
+    if (expandedPerson === personId) {
+      setExpandedPerson(null);
+      setExpandedTxns([]);
+      setSelectedTxnId(null);
+      setPayAmount('');
+      return;
+    }
+
+    setExpandedPerson(personId);
+    setSelectedTxnId(null);
+    setPayAmount('');
+
+    const txns = await dataLayer.getTransactions({ personId });
+    const outstanding = txns.filter(t => t.status === 'pending' || t.status === 'partial');
+
+    const txnData = [];
+    for (const txn of outstanding) {
+      const payments = await dataLayer.getPayments(txn.id);
+      const paid = payments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = txn.amount - paid;
+      if (remaining > 0) {
+        txnData.push({
+          id: txn.id,
+          type: txn.type,
+          amount: txn.amount,
+          remaining,
+          note: txn.note,
+          date: txn.date,
+        });
+      }
+    }
+    setExpandedTxns(txnData);
+    if (txnData.length > 0) {
+      setSelectedTxnId(txnData[0].id);
+    }
+  };
+  // Record a payment against a selected transaction
+  const handleRecordPayment = async (txnId: string) => {
+    const amount = parseFloat(payAmount);
+    if (!amount || amount <= 0) return;
+
+    await dataLayer.addPayment({
+      id: crypto.randomUUID(),
+      transactionId: txnId,
+      amount,
+      date: new Date(),
+      note: 'Quick payment',
+      createdAt: new Date(),
+    });
+
+    setPayAmount('');
+    setSelectedTxnId(null);
+    setExpandedPerson(null);
+    setExpandedTxns([]);
+    await refreshAll();
+  };
+
+  // Mark all outstanding transactions as settled for a person
+  const handleMarkSettled = async (personId: string) => {
+    const txns = await dataLayer.getTransactions({ personId });
+    const outstanding = txns.filter(t => t.status === 'pending' || t.status === 'partial');
+
+    for (const txn of outstanding) {
+      // Calculate remaining and add a payment to settle it
+      const payments = await dataLayer.getPayments(txn.id);
+      const paid = payments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = txn.amount - paid;
+      if (remaining > 0) {
+        await dataLayer.addPayment({
+          id: crypto.randomUUID(),
+          transactionId: txn.id,
+          amount: remaining,
+          date: new Date(),
+          note: 'Settled',
+          createdAt: new Date(),
+        });
+      }
+    }
+
+    setExpandedPerson(null);
+    await refreshAll();
   };
 
   // Check for pending changes on load
@@ -73,6 +163,8 @@ export default function DashboardPage() {
     }).catch(() => {});
   }, []);
 
+  const netBalance = summary?.netBalance || 0;
+
   return (
     <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
       {ToastElement}
@@ -82,10 +174,11 @@ export default function DashboardPage() {
         <PendingChangesModal onDismiss={() => setShowPendingModal(false)} />
       )}
 
-      {/* Persistent pending banner — tappable to re-open modal */}
+      {/* Persistent pending banner */}
       {hasPending && !showPendingModal && (
         <div
-          className="animate-in mb-4 cursor-pointer overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-3.5"
+          className="glass-card animate-in mb-4 cursor-pointer overflow-hidden rounded-2xl bg-amber-500/5! p-3.5"
+          style={{ borderColor: 'rgba(245, 158, 11, 0.15)' }}
           onClick={() => setShowPendingModal(true)}
         >
           <div className="flex items-center gap-3">
@@ -102,6 +195,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Header */}
       <div className="mb-5 flex items-center justify-between py-1">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
@@ -113,97 +207,93 @@ export default function DashboardPage() {
               </span>
             )}
           </h1>
-          <p className="mt-0.5 text-sm text-slate-400">Your money, managed</p>
+          <p className="mt-0.5 text-sm text-white/70">Your money, managed</p>
         </div>
       </div>
 
-
-
-      {/* Summary Cards */}
-      <div className="animate-in mb-5 flex flex-col gap-2">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-emerald-500/8 px-3 py-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
-              <ArrowUpRight size={14} />
+      {/* Summary Cards — Glass */}
+      <div className="mb-5 flex flex-col gap-2.5">
+        {/* Lent + Borrowed row */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="glass-card animate-in flex items-center gap-2.5 rounded-2xl px-3.5 py-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/70">
+              <ArrowUpRight size={15} />
             </div>
             <div className="min-w-0">
-              <p className="text-[0.65rem] font-medium text-slate-500">Lent Out</p>
-              <p className="text-base font-bold leading-tight text-emerald-400">
+              <p className="text-[0.65rem] font-medium text-white/70">Lent Out</p>
+              <p className="text-base font-bold leading-tight text-white">
                 {summaryLoading ? '—' : formatCurrency(summary?.totalLentOutstanding || 0)}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-amber-500/8 px-3 py-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
-              <ArrowDownLeft size={14} />
+          <div className="glass-card animate-in flex items-center gap-2.5 rounded-2xl px-3.5 py-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/70">
+              <ArrowDownLeft size={15} />
             </div>
             <div className="min-w-0">
-              <p className="text-[0.65rem] font-medium text-slate-500">Borrowed</p>
-              <p className="text-base font-bold leading-tight text-amber-400">
+              <p className="text-[0.65rem] font-medium text-white/70">Borrowed</p>
+              <p className="text-base font-bold leading-tight text-white">
                 {summaryLoading ? '—' : formatCurrency(summary?.totalBorrowedOutstanding || 0)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-800/40 px-3 py-2.5">
+        {/* Net Balance — full width glass */}
+        <div className="glass-card animate-in flex items-center justify-between rounded-2xl px-3.5 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-500">
-              <Scale size={14} />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/70">
+              <Scale size={15} />
             </div>
             <div>
-              <p className="text-[0.65rem] font-medium text-slate-500">Net Balance</p>
-              <p className="text-[0.65rem] text-slate-500">
-                {(summary?.netBalance || 0) > 0 ? 'Others owe you more' : (summary?.netBalance || 0) < 0 ? 'You owe others more' : 'All settled'}
+              <p className="text-[0.65rem] font-medium text-white/70">Net Balance</p>
+              <p className="text-[0.65rem] text-white/70">
+                {netBalance > 0 ? 'Others owe you more' : netBalance < 0 ? 'You owe others more' : 'All settled'}
               </p>
             </div>
           </div>
-          <p
-            className="text-lg font-bold"
-            style={{
-              color: (summary?.netBalance || 0) > 0 ? '#34d399' : (summary?.netBalance || 0) < 0 ? '#fbbf24' : '#94a3b8',
-            }}
-          >
-            {summaryLoading ? '—' : `${(summary?.netBalance || 0) >= 0 ? '+' : ''}${formatCurrency(summary?.netBalance || 0)}`}
+          <p className="text-lg font-bold text-white">
+            {summaryLoading ? '—' : `${netBalance >= 0 ? '+' : ''}${formatCurrency(netBalance)}`}
           </p>
         </div>
 
+        {/* Profit card */}
         {summary && summary.totalProfit > 0 && (
-          <div className="flex items-center justify-between rounded-xl border border-white/5 bg-blue-500/8 px-3 py-2.5">
+          <div className="glass-card animate-in flex items-center justify-between rounded-2xl px-3.5 py-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400">
-                <TrendingUp size={14} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/70">
+                <TrendingUp size={15} />
               </div>
-              <p className="text-[0.65rem] font-medium text-slate-500">Total Profit</p>
+              <p className="text-[0.65rem] font-medium text-white/70">Total Profit</p>
             </div>
-            <p className="text-base font-bold text-blue-400">
+            <p className="text-base font-bold text-white">
               +{formatCurrency(summary.totalProfit)}
             </p>
           </div>
         )}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions — Glass buttons */}
       <div className="mb-6 flex gap-3">
-        <Button
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-2.5 font-semibold text-white shadow-lg shadow-emerald-500/20"
-          onPress={() => openAdd('lend')}
+        <button
+          className="glass-card flex flex-1 items-center justify-center gap-2 rounded-2xl py-2.5 font-semibold text-white transition-all active:scale-[0.97]"
+          onClick={() => openAdd('lend')}
           id="quick-lend"
         >
           <Plus size={18} /> Lend Money
-        </Button>
-        <Button
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 py-2.5 font-semibold text-white shadow-lg shadow-amber-500/20"
-          onPress={() => openAdd('borrow')}
+        </button>
+        <button
+          className="glass-card flex flex-1 items-center justify-center gap-2 rounded-2xl py-2.5 font-semibold text-white transition-all active:scale-[0.97]"
+          onClick={() => openAdd('borrow')}
           id="quick-borrow"
         >
           <Plus size={18} /> Borrow Money
-        </Button>
+        </button>
       </div>
 
       {/* People with outstanding balances */}
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/70">
         Who Owes Who
       </h2>
 
@@ -234,50 +324,142 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2.5">
             {activePersons.map((person) => {
               const net = person.lentOutstanding - person.borrowedOutstanding;
+              const isExpanded = expandedPerson === person.id;
               return (
-                <div
-                  key={person.id}
-                  className={`animate-in flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-all hover:bg-slate-800/60 active:scale-[0.98] ${navigatingTo === person.id ? 'opacity-70' : ''}`}
-                  onClick={() => {
-                    if (navigatingTo) return;
-                    setNavigatingTo(person.id);
-                    router.push(`/person/${person.id}`);
-                  }}
-                  id={`person-${person.id}`}
-                >
-                  <UserAvatar name={person.name} size={42} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{person.name}</p>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs">
-                      {person.lentOutstanding > 0 && (
-                        <span className="flex items-center gap-0.5 text-emerald-500">
-                          <ArrowUpRight size={10} /> {formatCurrency(person.lentOutstanding)}
-                        </span>
-                      )}
-                      {person.lentOutstanding > 0 && person.borrowedOutstanding > 0 && (
-                        <span className="h-1 w-1 rounded-full bg-slate-600" />
-                      )}
-                      {person.borrowedOutstanding > 0 && (
-                        <span className="flex items-center gap-0.5 text-amber-500">
-                          <ArrowDownLeft size={10} /> {formatCurrency(person.borrowedOutstanding)}
-                        </span>
-                      )}
+                <div key={person.id} className="glass-card animate-in rounded-2xl" id={`person-${person.id}`}>
+                  {/* Card header — tap to expand */}
+                  <button
+                    className="flex w-full items-center gap-3.5 p-3.5 text-left"
+                    onClick={() => toggleExpand(person.id)}
+                  >
+                    <UserAvatar name={person.name} size={42} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{person.name}</p>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs">
+                        {person.lentOutstanding > 0 && (
+                          <span className="flex items-center gap-0.5 text-white/70">
+                            <ArrowUpRight size={10} /> {formatCurrency(person.lentOutstanding)}
+                          </span>
+                        )}
+                        {person.lentOutstanding > 0 && person.borrowedOutstanding > 0 && (
+                          <span className="h-1 w-1 rounded-full bg-white/20" />
+                        )}
+                        {person.borrowedOutstanding > 0 && (
+                          <span className="flex items-center gap-0.5 text-white/70">
+                            <ArrowDownLeft size={10} /> {formatCurrency(person.borrowedOutstanding)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {navigatingTo === person.id ? (
-                      <Loader2 size={20} className="animate-spin text-violet-400" />
-                    ) : (
-                      <>
-                        <p className="text-base font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#64748b' }}>
-                          {net >= 0 ? '+' : ''}{formatCurrency(net)}
-                        </p>
-                        <p className="text-[0.7rem] text-slate-500">
-                          {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
-                        </p>
-                      </>
+                    <div className="shrink-0 text-right">
+                      <p className="text-base font-bold text-white">
+                        {net >= 0 ? '+' : ''}{formatCurrency(net)}
+                      </p>
+                      <p className="text-[0.7rem] text-white/70">
+                        {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Expandable quick actions */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="border-t border-white/10 px-3.5 pb-3.5 pt-3">
+                          {/* Outstanding transactions list */}
+                          {expandedTxns.length > 0 && (
+                            <div className="mb-3 flex flex-col gap-1.5">
+                              <p className="text-[0.65rem] font-medium text-white/40 uppercase tracking-wider">Outstanding</p>
+                              {expandedTxns.map((txn) => {
+                                const isSelected = selectedTxnId === txn.id;
+                                return (
+                                  <div key={txn.id}>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedTxnId(isSelected ? null : txn.id);
+                                        setPayAmount('');
+                                      }}
+                                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all ${
+                                        isSelected ? 'bg-white/12' : 'bg-white/5'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {txn.type === 'lend' ? (
+                                          <ArrowUpRight size={12} className="text-emerald-400" />
+                                        ) : (
+                                          <ArrowDownLeft size={12} className="text-orange-400" />
+                                        )}
+                                        <span className="text-xs text-white/70">
+                                          {txn.type === 'lend' ? 'Lent' : 'Borrowed'} {formatCurrency(txn.amount)}
+                                          {txn.note && <span className="text-white/40"> · {txn.note}</span>}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs font-semibold text-white">
+                                        {formatCurrency(txn.remaining)}
+                                      </span>
+                                    </button>
+
+                                    {/* Payment input for selected transaction */}
+                                    <AnimatePresence>
+                                      {isSelected && (
+                                        <motion.div
+                                          initial={{ height: 0, opacity: 0 }}
+                                          animate={{ height: 'auto', opacity: 1 }}
+                                          exit={{ height: 0, opacity: 0 }}
+                                          transition={{ duration: 0.2 }}
+                                          className="overflow-hidden"
+                                        >
+                                          <div className="mt-1.5 flex items-center gap-2 pl-1">
+                                            <input
+                                              type="number"
+                                              inputMode="decimal"
+                                              placeholder="Amount"
+                                              value={payAmount}
+                                              onChange={(e) => setPayAmount(e.target.value)}
+                                              className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 outline-none focus:border-white/25"
+                                              autoFocus
+                                            />
+                                            <button
+                                              onClick={() => handleRecordPayment(txn.id)}
+                                              className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition-all active:scale-95"
+                                            >
+                                              Record
+                                            </button>
+                                          </div>
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Action buttons row */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleMarkSettled(person.id)}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 py-2 text-xs font-semibold text-emerald-400 transition-all active:scale-95"
+                            >
+                              <CheckCircle2 size={14} /> Mark Settled
+                            </button>
+                            <button
+                              onClick={() => router.push(`/person/${person.id}`)}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/8 py-2 text-xs font-semibold text-white/70 transition-all active:scale-95"
+                            >
+                              View Details <ChevronRight size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
-                  </div>
+                  </AnimatePresence>
                 </div>
               );
             })}

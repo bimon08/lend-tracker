@@ -101,7 +101,7 @@ export default function AddPaymentModal({
       onClick={settledView ? undefined : onClose}
     >
       <div
-        className="animate-in w-full max-w-lg rounded-t-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl sm:mx-4 sm:rounded-2xl"
+        className="animate-in glass-card w-full max-w-lg rounded-t-2xl p-6 shadow-2xl sm:mx-4 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {settledView ? (
@@ -110,16 +110,16 @@ export default function AddPaymentModal({
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
               <CheckCircle2 size={36} className="text-emerald-400" />
             </div>
-            <h3 className="mb-1 text-lg font-bold text-slate-100">Transaction Settled!</h3>
-            <p className="mb-6 text-sm text-slate-400">
+            <h3 className="mb-1 text-lg font-bold text-white">Transaction Settled!</h3>
+            <p className="mb-6 text-sm text-white/50">
               This transaction is fully paid. Would you like to delete it?
             </p>
 
             <div className="flex w-full flex-col gap-2.5">
-              <Button
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 py-2.5 text-sm font-semibold text-red-400 transition-all hover:bg-red-500/25 active:scale-[0.98]"
-                onPress={handleDelete}
-                isDisabled={deleting}
+              <button
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 py-2.5 text-sm font-semibold text-red-400 transition-all active:scale-[0.98]"
+                onClick={handleDelete}
+                disabled={deleting}
               >
                 {deleting ? (
                   <span className="flex items-center gap-2">
@@ -131,23 +131,23 @@ export default function AddPaymentModal({
                     <Trash2 size={15} /> Delete Transaction
                   </>
                 )}
-              </Button>
-              <Button
-                className="w-full rounded-xl bg-slate-800/60 py-2.5 text-sm font-semibold text-slate-300 transition-all hover:bg-slate-700 active:scale-[0.98]"
-                onPress={onClose}
+              </button>
+              <button
+                className="w-full rounded-xl bg-white/5 py-2.5 text-sm font-semibold text-white/70 transition-all active:scale-[0.98]"
+                onClick={onClose}
               >
                 Keep It
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
           /* Payment form */
           <>
-            <h3 className="mb-4 text-lg font-bold text-slate-100">Record Payment</h3>
+            <h3 className="mb-4 text-lg font-bold text-white">Record Payment</h3>
 
             {/* Outstanding badge */}
-            <div className="mb-5 flex items-center justify-between rounded-xl bg-slate-800/60 px-4 py-3">
-              <span className="text-xs text-slate-400">Outstanding</span>
+            <div className="mb-5 flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
+              <span className="text-xs text-white/40">Outstanding</span>
               <span
                 className="text-base font-bold"
                 style={{ color: transactionType === 'lend' ? '#34d399' : '#fbbf24' }}
@@ -158,16 +158,16 @@ export default function AddPaymentModal({
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Payment Amount</label>
+                <label className="mb-1.5 block text-xs font-medium text-white/40">Payment Amount</label>
                 <div className="flex items-center gap-2.5">
                   <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">₹</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/40">₹</span>
                     <AmountInput
                       value={amount}
                       onChange={(val) => { if (!autoSettle) setAmount(val); }}
                       placeholder="0"
                       required
-                      className={`w-full rounded-xl border border-white/10 bg-slate-800/60 py-2.5 pl-8 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50 ${autoSettle ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-8 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/25 ${autoSettle ? 'opacity-60 cursor-not-allowed' : ''}`}
                       disabled={autoSettle}
                     />
                   </div>
@@ -176,7 +176,7 @@ export default function AddPaymentModal({
                       className={`flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all select-none ${
                         autoSettle
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-slate-800/60 text-slate-400 border border-white/10 hover:border-white/20'
+                          : 'bg-white/5 text-white/40 border border-white/10'
                       }`}
                       id="auto-settle-label"
                     >
@@ -198,7 +198,7 @@ export default function AddPaymentModal({
                       <span className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${
                         autoSettle
                           ? 'border-emerald-500 bg-emerald-500'
-                          : 'border-slate-500 bg-transparent'
+                          : 'border-white/30 bg-transparent'
                       }`}>
                         {autoSettle && (
                           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -220,27 +220,27 @@ export default function AddPaymentModal({
               />
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Note (optional)</label>
+                <label className="mb-1.5 block text-xs font-medium text-white/40">Note (optional)</label>
                 <input
                   type="text"
                   placeholder="Payment note..."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500/50"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/25"
                 />
               </div>
 
-              <Button
+              <button
                 type="submit"
-                isDisabled={loading}
-                className={`w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] ${
+                disabled={loading}
+                className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-[0.98] ${
                   transactionType === 'lend'
-                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-500'
-                    : 'bg-gradient-to-r from-amber-600 to-amber-500'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-amber-500/20 text-amber-400'
                 }`}
               >
                 {loading ? 'Recording...' : 'Record Payment'}
-              </Button>
+              </button>
             </form>
           </>
         )}
@@ -248,3 +248,4 @@ export default function AddPaymentModal({
     </div>
   );
 }
+

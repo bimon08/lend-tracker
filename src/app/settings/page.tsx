@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button } from '@heroui/react';
+import { motion } from 'framer-motion';
 import {
   Download,
   Upload,
@@ -11,13 +11,21 @@ import {
   Cloud,
   Info,
   LogOut,
-  User,
   UsersRound,
 } from 'lucide-react';
 import { dataLayer } from '@/lib/db';
 import { createClient } from '@/lib/supabase/client';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
+
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1 },
+};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -114,147 +122,147 @@ export default function SettingsPage() {
     children?: React.ReactNode;
   }) => (
     <div
-      className={`flex items-center gap-3.5 rounded-xl px-3.5 py-3 transition-colors ${
-        onClick ? 'cursor-pointer hover:bg-white/5 active:scale-[0.99]' : ''
-      } ${danger ? 'hover:bg-red-500/5' : ''}`}
+      className={`flex items-center gap-3.5 rounded-xl px-3.5 py-3 transition-all ${
+        onClick ? 'cursor-pointer active:scale-[0.99] active:bg-white/5' : ''
+      } ${danger ? 'active:bg-red-500/5' : ''}`}
       onClick={onClick}
       id={id}
     >
       <div
         className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
-          danger ? 'bg-red-500/10 text-red-400' : 'bg-slate-700/50 text-slate-400'
+          danger ? 'bg-red-500/10 text-red-400' : 'bg-white/10 text-white/60'
         }`}
       >
         <Icon size={18} />
       </div>
       <div className="flex-1">
-        <p className={`text-sm font-medium ${danger ? 'text-red-400' : 'text-slate-200'}`}>
+        <p className={`text-sm font-medium ${danger ? 'text-red-400' : 'text-white'}`}>
           {title}
         </p>
-        <p className="text-xs text-slate-500">{subtitle}</p>
+        <p className="text-xs text-white/40">{subtitle}</p>
       </div>
       {children}
-      {onClick && <ChevronRight size={16} className="text-slate-600" />}
+      {onClick && <ChevronRight size={16} className="text-white/20" />}
     </div>
   );
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-2">
+    <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
       {ToastElement}
 
       <div className="mb-5 py-1">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-0.5 text-sm text-slate-400">Manage your account &amp; data</p>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Settings</h1>
+        <p className="mt-0.5 text-sm text-white/50">Manage your account &amp; data</p>
       </div>
 
-      {/* Account */}
-      <div className="mb-4">
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Account
-        </p>
-        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
-          <SettingsItem
-            icon={() => (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
-                {(userName || 'U').charAt(0).toUpperCase()}
-              </div>
-            )}
-            title={userName || 'User'}
-            subtitle={userEmail || 'Loading...'}
-          />
-          <SettingsItem
-            icon={LogOut}
-            title="Sign Out"
-            subtitle="Sign out of your account"
-            onClick={handleSignOut}
-            id="sign-out-btn"
-          />
-        </Card>
-      </div>
+      <motion.div variants={stagger} initial="hidden" animate="show" className="flex flex-col gap-4">
+        {/* Account */}
+        <motion.div variants={fadeUp}>
+          <p className="mb-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-white/40">
+            Account
+          </p>
+          <div className="glass-card overflow-hidden rounded-2xl p-1">
+            <SettingsItem
+              icon={() => (
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
+                  {(userName || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              title={userName || 'User'}
+              subtitle={userEmail || 'Loading...'}
+            />
+            <SettingsItem
+              icon={LogOut}
+              title="Sign Out"
+              subtitle="Sign out of your account"
+              onClick={handleSignOut}
+              id="sign-out-btn"
+            />
+          </div>
+        </motion.div>
 
+        {/* Team */}
+        <motion.div variants={fadeUp}>
+          <p className="mb-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-white/40">
+            Team
+          </p>
+          <div className="glass-card overflow-hidden rounded-2xl p-1">
+            <SettingsItem
+              icon={UsersRound}
+              title="Employee Access"
+              subtitle="Generate access codes & review changes"
+              onClick={() => router.push('/employees')}
+              id="employee-access"
+            />
+          </div>
+        </motion.div>
 
+        {/* Data Management */}
+        <motion.div variants={fadeUp}>
+          <p className="mb-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-white/40">
+            Data Management
+          </p>
+          <div className="glass-card overflow-hidden rounded-2xl p-1">
+            <SettingsItem
+              icon={Download}
+              title="Export Data"
+              subtitle="Download all data as JSON backup"
+              onClick={handleExport}
+              id="export-data"
+            />
+            <SettingsItem
+              icon={Upload}
+              title={importing ? 'Importing...' : 'Import Data'}
+              subtitle="Restore from a JSON backup file"
+              onClick={() => fileInputRef.current?.click()}
+              id="import-data"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              className="hidden"
+            />
+          </div>
+        </motion.div>
 
-      {/* Employee Access */}
-      <div className="mb-4">
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Team
-        </p>
-        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
-          <SettingsItem
-            icon={UsersRound}
-            title="Employee Access"
-            subtitle="Generate access codes & review changes"
-            onClick={() => router.push('/employees')}
-            id="employee-access"
-          />
-        </Card>
-      </div>
+        {/* About */}
+        <motion.div variants={fadeUp}>
+          <p className="mb-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-white/40">
+            About
+          </p>
+          <div className="glass-card overflow-hidden rounded-2xl p-1">
+            <SettingsItem
+              icon={Cloud}
+              title="Storage"
+              subtitle="Offline-first (local) · Syncs to cloud when online"
+            />
+            <SettingsItem
+              icon={Info}
+              title="LendTracker"
+              subtitle="v3.0.0 · Offline-First Edition · by Pixel Thread"
+            />
+          </div>
+        </motion.div>
 
-      {/* Data Management */}
-      <div className="mb-4">
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Data Management
-        </p>
-        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
-          <SettingsItem
-            icon={Download}
-            title="Export Data"
-            subtitle="Download all data as JSON backup"
-            onClick={handleExport}
-            id="export-data"
-          />
-          <SettingsItem
-            icon={Upload}
-            title={importing ? 'Importing...' : 'Import Data'}
-            subtitle="Restore from a JSON backup file"
-            onClick={() => fileInputRef.current?.click()}
-            id="import-data"
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            className="hidden"
-          />
-        </Card>
-      </div>
-
-      {/* About */}
-      <div className="mb-4">
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          About
-        </p>
-        <Card className="overflow-hidden border border-white/5 bg-slate-800/40 p-1">
-          <SettingsItem
-            icon={Cloud}
-            title="Storage"
-            subtitle="Offline-first (local) · Syncs to cloud when online"
-          />
-          <SettingsItem
-            icon={Info}
-            title="LendTracker"
-            subtitle="v3.0.0 · Offline-First Edition · by Pixel Thread"
-          />
-        </Card>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="mb-6">
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-red-400">
-          Danger Zone
-        </p>
-        <Card className="overflow-hidden border border-red-500/10 bg-slate-800/40 p-1">
-          <SettingsItem
-            icon={Trash2}
-            title="Clear All Data"
-            subtitle="Permanently delete everything. Cannot be undone."
-            onClick={() => setShowClearConfirm(true)}
-            danger
-            id="clear-all-data"
-          />
-        </Card>
-      </div>
+        {/* Danger Zone */}
+        <motion.div variants={fadeUp}>
+          <p className="mb-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-red-400/60">
+            Danger Zone
+          </p>
+          <div className="glass-card overflow-hidden rounded-2xl border-red-500/15! p-1">
+            <SettingsItem
+              icon={Trash2}
+              title="Clear All Data"
+              subtitle="Permanently delete everything. Cannot be undone."
+              onClick={() => setShowClearConfirm(true)}
+              danger
+              id="clear-all-data"
+            />
+          </div>
+        </motion.div>
+      </motion.div>
 
       <ConfirmDialog
         isOpen={showClearConfirm}
