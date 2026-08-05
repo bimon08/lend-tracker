@@ -6,6 +6,7 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import OfflineSyncBanner from '@/components/OfflineSyncBanner';
 import SyncInitializer from '@/components/SyncInitializer';
 import RegisterSW from '@/components/RegisterSW';
+import PullToRefresh from '@/components/PullToRefresh';
 import { PostHogProvider, PostHogPageview } from '@/lib/posthog';
 
 export const metadata: Metadata = {
@@ -40,7 +41,9 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <PostHogPageview />
           </Suspense>
-          <main>{children}</main>
+          <PullToRefresh>
+            <main>{children}</main>
+          </PullToRefresh>
           <BottomNav />
           <PWAInstallPrompt />
           <OfflineSyncBanner />
