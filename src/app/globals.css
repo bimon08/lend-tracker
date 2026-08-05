@@ -155,3 +155,19 @@
   0% { transform: scale(0.5); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ─── Date Picker Calendar ──────────────────────────────────────────────── */
+
+.dp-calendar-wrap [data-slot="calendar"] {
+  width: 100%;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dp-calendar-wrap [data-slot="calendar-header"] {
+  padding: 0.5rem 0.75rem 0;
+}
+
+.dp-calendar-wrap [data-slot="calendar-grid"] {
+  width: 100%;
+}

@@ -11,7 +11,6 @@ import {
   Clock,
   Users,
   TrendingUp,
-  ChevronRight,
   Loader2,
 } from 'lucide-react';
 import { useSummary, usePersonsWithSummaries } from '@/lib/hooks';
@@ -187,36 +186,20 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="mb-6 flex gap-3">
-        <div className="flex flex-1 flex-col gap-1.5">
-          <Button
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-2.5 font-semibold text-white shadow-lg shadow-emerald-500/20"
-            onPress={() => openAdd('lend')}
-            id="quick-lend"
-          >
-            <Plus size={18} /> Lend Money
-          </Button>
-          <button
-            className="flex items-center justify-center gap-0.5 text-[0.65rem] font-medium text-emerald-400/70 transition-colors hover:text-emerald-400"
-            onClick={() => router.push('/lend')}
-          >
-            View all lent <ChevronRight size={12} />
-          </button>
-        </div>
-        <div className="flex flex-1 flex-col gap-1.5">
-          <Button
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 py-2.5 font-semibold text-white shadow-lg shadow-amber-500/20"
-            onPress={() => openAdd('borrow')}
-            id="quick-borrow"
-          >
-            <Plus size={18} /> Borrow Money
-          </Button>
-          <button
-            className="flex items-center justify-center gap-0.5 text-[0.65rem] font-medium text-amber-400/70 transition-colors hover:text-amber-400"
-            onClick={() => router.push('/borrow')}
-          >
-            View all borrowed <ChevronRight size={12} />
-          </button>
-        </div>
+        <Button
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-2.5 font-semibold text-white shadow-lg shadow-emerald-500/20"
+          onPress={() => openAdd('lend')}
+          id="quick-lend"
+        >
+          <Plus size={18} /> Lend Money
+        </Button>
+        <Button
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 py-2.5 font-semibold text-white shadow-lg shadow-amber-500/20"
+          onPress={() => openAdd('borrow')}
+          id="quick-borrow"
+        >
+          <Plus size={18} /> Borrow Money
+        </Button>
       </div>
 
       {/* People with outstanding balances */}

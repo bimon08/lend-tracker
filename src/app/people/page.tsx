@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Search, ArrowUpRight, ArrowDownLeft, Plus, Phone } from 'lucide-react';
+import { Users, Search, ArrowUpRight, ArrowDownLeft, Plus } from 'lucide-react';
 import { usePersonsWithSummaries } from '@/lib/hooks';
 import { formatCurrency } from '@/lib/utils';
 import EmptyState from '@/components/EmptyState';
@@ -10,22 +10,67 @@ import AddPersonModal from '@/components/AddPersonModal';
 import UserAvatar from '@/components/UserAvatar';
 import { useToast } from '@/components/Toast';
 
+type TabFilter = 'all' | 'lent' | 'borrowed';
+
+const TABS: { key: TabFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'lent', label: 'Lent' },
+  { key: 'borrowed', label: 'Borrowed' },
+];
+
 export default function PeoplePage() {
   const router = useRouter();
   const { data: persons, loading, refetch } = usePersonsWithSummaries();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [showAddPerson, setShowAddPerson] = useState(false);
   const { showToast, ToastElement } = useToast();
 
-  const filtered = (persons || []).filter((p) =>
-    !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = (persons || []).filter((p) => {
+    // Search filter
+    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    // Tab filter
+    if (activeTab === 'lent') return p.lentOutstanding > 0;
+    if (activeTab === 'borrowed') return p.borrowedOutstanding > 0;
+    return true;
+  });
+
+  const getEmptyMessage = () => {
+    if (searchQuery) return { title: 'No results', desc: 'Try a different search term' };
+    if (activeTab === 'lent') return { title: 'No active lending', desc: 'You haven\'t lent money to anyone yet' };
+    if (activeTab === 'borrowed') return { title: 'No active borrowing', desc: 'You haven\'t borrowed money from anyone yet' };
+    return { title: 'No people yet', desc: 'Add a transaction to see people here' };
+  };
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
       <div className="mb-5 py-1">
         <h1 className="text-2xl font-bold tracking-tight">People</h1>
         <p className="mt-0.5 text-sm text-slate-400">Everyone you transact with</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-4 flex gap-1 rounded-xl bg-slate-800/60 p-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+              activeTab === tab.key
+                ? tab.key === 'lent'
+                  ? 'bg-emerald-500/20 text-emerald-400 shadow-sm'
+                  : tab.key === 'borrowed'
+                    ? 'bg-amber-500/20 text-amber-400 shadow-sm'
+                    : 'bg-violet-500/20 text-violet-300 shadow-sm'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+            id={`tab-${tab.key}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Search */}
@@ -48,8 +93,8 @@ export default function PeoplePage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={28} />}
-          title={searchQuery ? 'No results' : 'No people yet'}
-          description={searchQuery ? 'Try a different search term' : 'Add a transaction to see people here'}
+          title={getEmptyMessage().title}
+          description={getEmptyMessage().desc}
         />
       ) : (
         <div className="flex flex-col gap-2.5">
