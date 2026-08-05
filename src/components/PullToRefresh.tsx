@@ -99,14 +99,6 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
     };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-  // Disable default browser pull-to-refresh
-  useEffect(() => {
-    document.body.style.overscrollBehaviorY = 'contain';
-    return () => {
-      document.body.style.overscrollBehaviorY = '';
-    };
-  }, []);
-
   const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
   const showIndicator = state !== 'idle';
 
