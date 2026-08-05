@@ -6,6 +6,7 @@ import { Check } from 'lucide-react';
 import { dataLayer } from '@/lib/db';
 import { generateId, formatInputDate, parseAmountInput } from '@/lib/utils';
 import AmountInput from '@/components/AmountInput';
+import DatePicker from '@/components/DatePicker';
 import type { Person } from '@/lib/db';
 
 interface AddTransactionModalProps {
@@ -246,25 +247,18 @@ export default function AddTransactionModal({
 
           {/* Date Row */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-400">Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500/50"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-400">Due Date</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500/50"
-              />
-            </div>
+            <DatePicker
+              value={date}
+              onChange={setDate}
+              label="Date"
+              required
+            />
+            <DatePicker
+              value={dueDate}
+              onChange={setDueDate}
+              label="Due Date"
+              placeholder="Optional"
+            />
           </div>
 
           {/* Note */}

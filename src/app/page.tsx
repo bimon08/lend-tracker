@@ -11,6 +11,8 @@ import {
   Clock,
   Users,
   TrendingUp,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { useSummary, usePersonsWithSummaries } from '@/lib/hooks';
 import { dataLayer } from '@/lib/db';
@@ -30,6 +32,7 @@ export default function DashboardPage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [defaultType, setDefaultType] = useState<'lend' | 'borrow'>('lend');
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [hasPending, setHasPending] = useState(false);
@@ -184,20 +187,36 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="mb-6 flex gap-3">
-        <Button
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-2.5 font-semibold text-white shadow-lg shadow-emerald-500/20"
-          onPress={() => openAdd('lend')}
-          id="quick-lend"
-        >
-          <Plus size={18} /> Lend Money
-        </Button>
-        <Button
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 py-2.5 font-semibold text-white shadow-lg shadow-amber-500/20"
-          onPress={() => openAdd('borrow')}
-          id="quick-borrow"
-        >
-          <Plus size={18} /> Borrow Money
-        </Button>
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Button
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-2.5 font-semibold text-white shadow-lg shadow-emerald-500/20"
+            onPress={() => openAdd('lend')}
+            id="quick-lend"
+          >
+            <Plus size={18} /> Lend Money
+          </Button>
+          <button
+            className="flex items-center justify-center gap-0.5 text-[0.65rem] font-medium text-emerald-400/70 transition-colors hover:text-emerald-400"
+            onClick={() => router.push('/lend')}
+          >
+            View all lent <ChevronRight size={12} />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Button
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 py-2.5 font-semibold text-white shadow-lg shadow-amber-500/20"
+            onPress={() => openAdd('borrow')}
+            id="quick-borrow"
+          >
+            <Plus size={18} /> Borrow Money
+          </Button>
+          <button
+            className="flex items-center justify-center gap-0.5 text-[0.65rem] font-medium text-amber-400/70 transition-colors hover:text-amber-400"
+            onClick={() => router.push('/borrow')}
+          >
+            View all borrowed <ChevronRight size={12} />
+          </button>
+        </div>
       </div>
 
       {/* People with outstanding balances */}
@@ -235,8 +254,12 @@ export default function DashboardPage() {
               return (
                 <div
                   key={person.id}
-                  className="animate-in flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-colors hover:bg-slate-800/60 active:scale-[0.98]"
-                  onClick={() => router.push(`/person/${person.id}`)}
+                  className={`animate-in flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/5 bg-slate-800/40 p-3.5 transition-all hover:bg-slate-800/60 active:scale-[0.98] ${navigatingTo === person.id ? 'opacity-70' : ''}`}
+                  onClick={() => {
+                    if (navigatingTo) return;
+                    setNavigatingTo(person.id);
+                    router.push(`/person/${person.id}`);
+                  }}
                   id={`person-${person.id}`}
                 >
                   <UserAvatar name={person.name} size={42} />
@@ -259,12 +282,18 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-base font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#64748b' }}>
-                      {net >= 0 ? '+' : ''}{formatCurrency(net)}
-                    </p>
-                    <p className="text-[0.7rem] text-slate-500">
-                      {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
-                    </p>
+                    {navigatingTo === person.id ? (
+                      <Loader2 size={20} className="animate-spin text-violet-400" />
+                    ) : (
+                      <>
+                        <p className="text-base font-bold" style={{ color: net > 0 ? '#34d399' : net < 0 ? '#fbbf24' : '#64748b' }}>
+                          {net >= 0 ? '+' : ''}{formatCurrency(net)}
+                        </p>
+                        <p className="text-[0.7rem] text-slate-500">
+                          {net > 0 ? 'owes you' : net < 0 ? 'you owe' : 'settled'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               );

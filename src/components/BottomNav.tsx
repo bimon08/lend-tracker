@@ -4,8 +4,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useTransition } from 'react';
 import {
   LayoutDashboard,
-  ArrowUpRight,
-  ArrowDownLeft,
   Users,
   Settings,
   Loader2,
@@ -14,8 +12,6 @@ import { dataLayer } from '@/lib/db';
 
 const navItems = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
-  { href: '/lend', label: 'Lent', icon: ArrowUpRight },
-  { href: '/borrow', label: 'Borrowed', icon: ArrowDownLeft },
   { href: '/people', label: 'People', icon: Users },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

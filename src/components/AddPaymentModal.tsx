@@ -6,6 +6,7 @@ import { CheckCircle2, Trash2 } from 'lucide-react';
 import { formatCurrency, formatInputDate, generateId, parseAmountInput } from '@/lib/utils';
 import { dataLayer } from '@/lib/db';
 import AmountInput from '@/components/AmountInput';
+import DatePicker from '@/components/DatePicker';
 
 interface AddPaymentModalProps {
   isOpen: boolean;
@@ -211,16 +212,12 @@ export default function AddPaymentModal({
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Payment Date</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500/50"
-                />
-              </div>
+              <DatePicker
+                value={date}
+                onChange={setDate}
+                label="Payment Date"
+                required
+              />
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">Note (optional)</label>

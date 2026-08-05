@@ -84,7 +84,38 @@ export default function PersonDetailPage({
   };
 
   if (personLoading) {
-    return <div className="mx-auto max-w-lg px-4 pt-2"><div className="skeleton" style={{ height: 200 }} /></div>;
+    return (
+      <div className="mx-auto max-w-lg px-4 pt-2 pb-24">
+        {/* Back button skeleton */}
+        <div className="mb-4 h-5 w-16 rounded skeleton" />
+
+        {/* Hero card skeleton */}
+        <div className="animate-in mb-5 rounded-2xl border border-white/5 bg-slate-800/40 p-5 text-center">
+          <div className="mx-auto mb-3 h-16 w-16 rounded-full skeleton" />
+          <div className="mx-auto mb-2 h-5 w-28 rounded skeleton" />
+          <div className="mx-auto mb-1 h-3 w-20 rounded skeleton" />
+          <div className="mx-auto mb-1 h-8 w-24 rounded skeleton" />
+          <div className="mx-auto h-3 w-16 rounded skeleton" />
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="h-16 rounded-xl skeleton" />
+            <div className="h-16 rounded-xl skeleton" />
+          </div>
+        </div>
+
+        {/* Action buttons skeleton */}
+        <div className="mb-5 flex gap-3">
+          <div className="h-10 flex-1 rounded-xl skeleton" />
+          <div className="h-10 flex-1 rounded-xl skeleton" />
+        </div>
+
+        {/* Transactions skeleton */}
+        <div className="mb-3 h-3 w-24 rounded skeleton" />
+        <div className="flex flex-col gap-2.5">
+          <div className="h-32 rounded-2xl skeleton" />
+          <div className="h-32 rounded-2xl skeleton" />
+        </div>
+      </div>
+    );
   }
 
   if (!person) {
